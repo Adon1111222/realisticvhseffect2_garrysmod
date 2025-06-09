@@ -37,7 +37,12 @@ local matblue = CreateMaterial("realisticvhseffect2/bluemat","UnLitGeneric",{
     ["$additive"] = 1
 })
 local colormod = CreateMaterial("realisticvhseffect2/colormod","g_colourmodify",{["$fbtexture"] = rt:GetName(),["$pp_colour_addr"] = 0,["$pp_colour_addg"] = 0,["$pp_colour_addb"] = 0,["$pp_colour_brightness"] = 0.1,["$pp_colour_inv"] = 0,["$pp_colour_colour"] = 0,["$pp_colour_contrast"] = 1,["$pp_colour_mulr"] = 0,["$pp_colour_mulg"] = 0,["$pp_colour_mulb"] = 0,})
-local interlacedbufferrt = GetRenderTarget("realisticvhseffect2/interlacedbufferrt",ScrW(),ScrH())
+local interlacedbufferrt = GetRenderTargetEx("realisticvhseffect2/interlacedbufferrt",ScrW(),ScrH(),
+	RT_SIZE_NO_CHANGE,
+	3,
+	bit.bor(2, 256),
+	0,
+	IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer. update 09.06.2025
 local interlacedbuffermat = CreateMaterial("realisticvhseffect2/interlacedbuffermat","UnLitGeneric",{["$basetexture"] = interlacedbufferrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
 local interlacedcopyrt = GetRenderTarget("realisticvhseffect2/interlacedcopyrt",ScrW(),ScrH())
 local interlacedcopymat = CreateMaterial("realisticvhseffect2/interlacedcopymat","UnLitGeneric",{["$basetexture"] = interlacedcopyrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
