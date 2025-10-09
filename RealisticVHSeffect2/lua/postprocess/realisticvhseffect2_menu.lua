@@ -1,4 +1,9 @@
 
+local REALISTICVHSEFFECT2_CFG_enabled = GetConVar_Internal("realisticvhseffect2_enabled")
+local REALISTICVHSEFFECT2_CFG_autodisable = GetConVar_Internal("realisticvhseffect2_autodisable")
+local REALISTICVHSEFFECT2_CFG_osdautocurtime = GetConVar_Internal("realisticvhseffect2_osdautocurtime")
+local REALISTICVHSEFFECT2_CFG_dspenabled = GetConVar_Internal("realisticvhseffect2_dspenabled")
+
 local function menu_addslider(parent,x,y,w,h,name,min,max,decimals,onchange,think)
     local newslider = vgui.Create("DNumSlider",parent)
     newslider:SetPos(x,y)
@@ -84,20 +89,48 @@ local function menu_addcategory(parent,x,y,w,h,name,opened)
     newcategory.OnToggle = function(self,opened)
         local ypos = nil
         for k,v in pairs(self:GetParent():GetChildren()) do
-            if v:GetName() == "DCollapsibleCategory" then
                 if ypos then
                     local xpos = v:GetPos()
                     v:SetPos(xpos,ypos)
                 else
                     _,ypos = v:GetPos()
                 end
+            if v:GetName() == "DCollapsibleCategory" then
                 if v:GetExpanded() then
-                    ypos = ypos + v.OldHeight+v:GetHeaderHeight()+8
+                    local _,vheight = v:ChildrenSize()
+                    ypos = ypos + vheight+v:GetHeaderHeight()+8 -- v.OldHeight
                 else
                     ypos = ypos + v:GetHeaderHeight()+8
                 end
+            else
+                local _,vheight = v:GetSize()
+                ypos = ypos + vheight
             end
         end
+        timer.Simple(0.5,function()--RealFrameTime()*10,function()
+        if IsValid(self:GetParent():GetParent()) then
+            local ypos = nil
+            for k,v in pairs(self:GetParent():GetParent():GetChildren()) do
+                    if ypos then
+                        local xpos = v:GetPos()
+                        v:SetPos(xpos,ypos)
+                    else
+                        _,ypos = v:GetPos()
+                    end
+                if v:GetName() == "DCollapsibleCategory" then
+                    if v:GetExpanded() then
+                        local _,vheight = v:ChildrenSize()
+                        ypos = ypos + vheight+v:GetHeaderHeight()+8 -- v.OldHeight
+                    else
+                        ypos = ypos + v:GetHeaderHeight()+8
+                    end
+                else
+                    local _,vheight = v:GetSize()
+                    ypos = ypos + vheight
+                end
+            end
+        end
+        end)
     end
     return newcategory
 end
@@ -246,12 +279,16 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
     end
     local datesamples = {}
     for k,v in pairs(REALISTICVHSEFFECT2_CFG.osd.datesamples) do
-        datesamples[k] = v
+        datesamples[k] = "[" .. string.Replace(string.TrimLeft(tostring(k),"%",""),"\n","") .. "] " .. v
     end
     menu_addcombobox(frame,8,424,96,96,16,"Add Fragment","Select Sample",datesamples,function(_,ind,val)
         local sampleval = nil
+
+        local strS = string.find(val,"] ")
+        if not strS then return end
+        local sval = string.sub(val,strS+2)
         for k,v in pairs(REALISTICVHSEFFECT2_CFG.osd.datesamples) do
-            if v == val then
+            if v == sval then
                 sampleval = k
             end
         end
@@ -283,6 +320,7 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
         REALISTICVHSEFFECT2_CFG.osd.years = osdatereturn.year
         rebuildlist()
     end)
+    menu_addcheckbox(frame,320,232,448,32,"Auto set to CurTime",function(_,value) REALISTICVHSEFFECT2_CFG_osdautocurtime:SetBool(value) end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG_osdautocurtime:GetBool()) end)
     menu_addnumwang(frame,320,96,64,64,16,"Years",0,9999,REALISTICVHSEFFECT2_CFG.osd.years,function(self)REALISTICVHSEFFECT2_CFG.osd.years = self:GetValue() end)
     menu_addnumwang(frame,320,116,64,64,16,"Months",1,12,REALISTICVHSEFFECT2_CFG.osd.months,function(self)REALISTICVHSEFFECT2_CFG.osd.months = self:GetValue() end)
     menu_addnumwang(frame,320,136,64,64,16,"Days",1,31,REALISTICVHSEFFECT2_CFG.osd.days,function(self)REALISTICVHSEFFECT2_CFG.osd.days = self:GetValue() end)
@@ -315,6 +353,31 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
         end
     end)
 end)
+concommand.Add("realisticvhseffect2_resetall",function(_,_,args,argsStr)
+    if string.find(argsStr or "","force",0,-1) then
+        REALISTICVHSEFFECT2_CFG = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT)
+        return
+    end
+    local frame = vgui.Create("DFrame")
+    frame:SetTitle("RealisticVHSEffect2")
+    frame:SetSize(256,128)
+    frame:Center()
+    frame:MakePopup()
+    frame.Paint = function(self,w,h)
+        draw.RoundedBox(6,0,0,w,h,Color(64,64,64))
+        draw.RoundedBox(6,0,0,w,25,Color(127,127,127))
+    end
+    frame.btnMinim:Hide(true)
+    frame.btnMaxim:Hide(true)
+    menu_addlabel(frame,32,32,192,32,"Do you want to reset all settings?")
+    menu_addbutton(frame,32,64,64,64,"No",function()
+         frame:Close()
+    end)
+    menu_addbutton(frame,192,64,32,32,"Yes",function()
+         frame:Close()
+         RunConsoleCommand("realisticvhseffect2_resetall","force")
+    end)
+end)
 concommand.Add("realisticvhseffect2_menu",function()
     local frame = vgui.Create("DFrame")
     frame:SetTitle("RealisticVHSEffect2 Menu")
@@ -330,9 +393,13 @@ concommand.Add("realisticvhseffect2_menu",function()
     mainscrollpanel.Paint = function(self,w,h)
         draw.RoundedBox(0,0,0,w,h,Color(64,64,64))
     end
-    menu_addcheckbox(mainscrollpanel,8,6,96,32,"Enabled",function(_,value)REALISTICVHSEFFECT2_CFG.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.enabled) end)
+    menu_addcheckbox(mainscrollpanel,8,6,96,32,"Enabled",function(_,value)REALISTICVHSEFFECT2_CFG_enabled:SetBool(value) end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG_enabled:GetBool()) end)
+    menu_addcheckbox(mainscrollpanel,8,28,96,32,"Disable on map load",function(_,value)REALISTICVHSEFFECT2_CFG_autodisable:SetBool(value) end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG_autodisable:GetBool()) end)
     menu_addbutton(mainscrollpanel,0,38,512,16,"SaveCFG",function()
         RunConsoleCommand("realisticvhseffect2_savecfg")
+    end)
+    menu_addbutton(mainscrollpanel,0,38,512,16,"Reset all",function()
+        RunConsoleCommand("realisticvhseffect2_resetall")
     end)
     menu_addbutton(mainscrollpanel,0,70,512,16,"LoadCFG",function()
         RunConsoleCommand("realisticvhseffect2_loadcfg")
@@ -343,18 +410,20 @@ concommand.Add("realisticvhseffect2_menu",function()
         end)
         local hookclasstbl = {"RenderScreenspaceEffects","PostDrawHUD","DrawOverlay"}
         menu_addcombobox(prerendercategory,8,60,96,64,16,"Hook class",REALISTICVHSEFFECT2_CFG.currenthookclass,hookclasstbl,function(_,ind) RunConsoleCommand("realisticvhseffect2_changehook",hookclasstbl[ind]) end)
+        menu_addcheckbox(prerendercategory,8,76,96,32,"Equalize sound",function(_,value)REALISTICVHSEFFECT2_CFG_dspenabled:SetBool(value) end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG_dspenabled:GetBool()) end)
         local prerendercategory_lensclr = menu_addcategory(prerendercategory,8,132,472,16,"Lens Colour Distortion",false)
             menu_addbutton(prerendercategory_lensclr,8,28,128,16,"Reset to defaults",function()
                 REALISTICVHSEFFECT2_CFG.cameraclrdist = {r = 0,g = 0,b = 0}
             end)
-            menu_addslider(prerendercategory_lensclr,16,52,448,32,"R Distance",0,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.r = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.r) end)
-            menu_addslider(prerendercategory_lensclr,16,84,448,32,"G Distance",0,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.g = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.g) end)
-            menu_addslider(prerendercategory_lensclr,16,116,448,32,"B Distance",0,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.b = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.b) end)
+            menu_addslider(prerendercategory_lensclr,16,52,448,32,"R Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.r = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.r) end)
+            menu_addslider(prerendercategory_lensclr,16,84,448,32,"G Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.g = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.g) end)
+            menu_addslider(prerendercategory_lensclr,16,116,448,32,"B Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.b = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.b) end)
     local mainrendercategory = menu_addcategory(mainscrollpanel,8,8,496,196,"Main-Render",false)
         menu_addbutton(mainrendercategory,8,28,128,16,"OSD Menu",function()
             RunConsoleCommand("realisticvhseffect2_osdmenu","")
         end)
-        menu_addcheckbox(mainrendercategory,16,60,448,32,"Interlacing",function(_,value) REALISTICVHSEFFECT2_CFG.interlaced.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.interlaced.enabled) end)
+        menu_addcheckbox(mainrendercategory,16,60,448,16,"Interlacing",function(_,value) REALISTICVHSEFFECT2_CFG.interlaced.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.interlaced.enabled) end)
+        menu_addslider(mainrendercategory,16,76,448,16,"Interlacing blending",0.01,1,3,function(slider,value) REALISTICVHSEFFECT2_CFG.interlaced.blend = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.interlaced.blend) end)
         local mainrendercategory_comets = menu_addcategory(mainrendercategory,8,92,472,16,"Comets",false)
             menu_addbutton(mainrendercategory_comets,8,28,128,16,"Reset to defaults",function()
                 REALISTICVHSEFFECT2_CFG.comets = {factor = 50000,enabled = false,size = 0.5}
@@ -362,14 +431,36 @@ concommand.Add("realisticvhseffect2_menu",function()
             menu_addcheckbox(mainrendercategory_comets,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.comets.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.comets.enabled) end)
             menu_addslider(mainrendercategory_comets,16,84,448,32,"Factor",1,100000,0,function(slider,value) REALISTICVHSEFFECT2_CFG.comets.factor = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.comets.factor) end)
             menu_addslider(mainrendercategory_comets,16,116,448,32,"Size",0.125,1,3,function(slider,value) REALISTICVHSEFFECT2_CFG.comets.size = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.comets.size) end)
-        local mainrendercategory_wave = menu_addcategory(mainrendercategory,8,132,472,16,"Horizontal Synchronization",false)
-            menu_addbutton(mainrendercategory_wave,8,36,128,16,"Reset to defaults",function()
-                REALISTICVHSEFFECT2_CFG.wave = {enabled = true,freq = 4,detail = 2,amp = 0.025}
+        local mainrendercategory_horizontalsync = menu_addcategory(mainrendercategory,8,132,472,16,"Horizontal Synchronization",false)
+            menu_addbutton(mainrendercategory_horizontalsync,8,36,128,16,"Reset to defaults",function()
+
             end)
-            menu_addcheckbox(mainrendercategory_wave,16,52,448,32,"Wave Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.wave.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.enabled) end)
-            menu_addslider(mainrendercategory_wave,16,84,448,32,"Frequency",1,500,0,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.freq = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.freq) end)
-            menu_addslider(mainrendercategory_wave,16,116,448,32,"Detail",1,10,0,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.detail = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.detail) end)
-            menu_addslider(mainrendercategory_wave,16,148,448,32,"Amplitude",0,25,6,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.amp = value*2 end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.amp/2) end)
+            local mainrendercategory_horizontalsync_wave = menu_addcategory(mainrendercategory_horizontalsync,8,52,472,16,"Wave",false)
+                menu_addbutton(mainrendercategory_horizontalsync_wave,8,36,128,16,"Reset to defaults",function()
+                    REALISTICVHSEFFECT2_CFG.wave = {enabled = true,freq = 4,detail = 2,amp = 0.025}
+                end)
+                menu_addcheckbox(mainrendercategory_horizontalsync_wave,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.wave.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.enabled) end)
+                menu_addslider(mainrendercategory_horizontalsync_wave,16,84,448,32,"Frequency",1,500,0,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.freq = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.freq) end)
+                menu_addslider(mainrendercategory_horizontalsync_wave,16,116,448,32,"Detail",1,10,0,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.detail = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.detail) end)
+                menu_addslider(mainrendercategory_horizontalsync_wave,16,148,448,32,"Amplitude",0,25,6,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.amp = value*2 end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.amp/2) end)
+                menu_addslider(mainrendercategory_horizontalsync_wave,16,180,448,32,"Noise",0,50,0,function(slider,value) REALISTICVHSEFFECT2_CFG.wave.noise = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wave.noise) end)
+            local mainrendercategory_horizontalsync_lines = menu_addcategory(mainrendercategory_horizontalsync,8,84,472,16,"Lines",false)
+                menu_addbutton(mainrendercategory_horizontalsync_lines,8,36,128,16,"Reset to defaults",function()
+                    REALISTICVHSEFFECT2_CFG.lines = {enabled = true,amp = 2,bottomline = {enabled = true,height = 8,amp = 5},upperline = {enabled = false,height = 64,scale = -0.1,noise = false}}
+                end)
+                menu_addcheckbox(mainrendercategory_horizontalsync_lines,16,52,448,16,"Lines Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.lines.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.enabled) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,68,448,16,"Lines General Amplitude",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.upperline.scale = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.scale) end)
+                menu_addcheckbox(mainrendercategory_horizontalsync_lines,16,84,448,16,"Upper Line Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.lines.upperline.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.enabled) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,100,448,16,"Upper Line Height",1,128,0,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.upperline.height = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.height) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,116,448,16,"Upper Line Scale",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.upperline.scale = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.scale) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,132,448,16,"Upper Line Noise",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.upperline.noise = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.noise) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,148,448,16,"Upper Line Random Amplitude",0,8,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.upperline.randamp = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.upperline.randamp) end)
+                menu_addcheckbox(mainrendercategory_horizontalsync_lines,16,164,448,16,"Bottom Line Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,180,448,16,"Bottom Line Height",1,128,0,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.height = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.height) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,196,448,16,"Bottom Line Scale",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.amp = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.amp) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,212,448,16,"Bottom Line Noise",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.noise = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.noise) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,228,448,16,"Bottom Line Random Amplitude",0,8,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.randamp = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.randamp) end)
+                    menu_addslider(mainrendercategory_horizontalsync_lines,32,244,448,16,"Bottom Line Random Colour",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr) end)
         local mainrendercategory_sharpen = menu_addcategory(mainrendercategory,8,172,472,16,"Sharpen",false)
             menu_addbutton(mainrendercategory_sharpen,8,36,128,16,"Reset to defaults",function()
                 REALISTICVHSEFFECT2_CFG.sharpen = {enabled = true,size = 1,value = 3}
@@ -414,6 +505,15 @@ concommand.Add("realisticvhseffect2_menu",function()
                 end)
                 menu_addcheckbox(mainrendercategory_channelsettings_chroma_drops,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop) end)
                 menu_addslider(mainrendercategory_channelsettings_chroma_drops,16,84,448,32,"Max Drops In Frame",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop_maxdrops = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop_maxdrops) end)
+        local mainrendercategory_noise_overlay = menu_addcategory(mainrendercategory,8,252,472,16,"Noise Overlay",false)
+            menu_addbutton(mainrendercategory_noise_overlay,8,28,128,16,"Reset to defaults",function()
+                REALISTICVHSEFFECT2_CFG.noise_overlay = {enabled = false,gap = false,gappos = 0.5,gapsize = 0.25,}
+            end)
+            menu_addcheckbox(mainrendercategory_noise_overlay,16,52,448,16,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.noise_overlay.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.enabled) end)
+            menu_addcheckbox(mainrendercategory_noise_overlay,16,68,448,16,"Gap enabled",function(_,value) REALISTICVHSEFFECT2_CFG.noise_overlay.gapenabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.gapenabled) end)
+            menu_addcheckbox(mainrendercategory_noise_overlay,16,84,448,16,"Gap animation enabled",function(_,value) REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim) end)
+            menu_addslider(mainrendercategory_noise_overlay,16,100,448,32,"Gap size",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize) end)
+            menu_addslider(mainrendercategory_noise_overlay,16,132,448,32,"Gap position",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.gappos) end)
 
     local postrendercategory = menu_addcategory(mainscrollpanel,8,204,496,196,"Post-Render",false)
         local viewtypetbl = {[0] = "Full-Screen",[1] = "ReSize-4:3",[2] = "Crop-4:3"}
@@ -433,16 +533,16 @@ concommand.Add("realisticvhseffect2_menu",function()
                     ["pp_colour_mulb"] = 0,
                 }
             end)
-            menu_addslider(postrendercategory_clrmod,8,48,448,32,"AddR",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addr = value end)
-            menu_addslider(postrendercategory_clrmod,8,80,448,32,"AddG",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addg = value end)
-            menu_addslider(postrendercategory_clrmod,8,112,448,32,"AddB",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addb = value end)
-            menu_addslider(postrendercategory_clrmod,8,144,448,32,"Brightness",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_brightness = value end)
-            menu_addslider(postrendercategory_clrmod,8,176,448,32,"Colour",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_colour = value end)
-            menu_addslider(postrendercategory_clrmod,8,208,448,32,"Invert",0,1,0,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_inv = value end)
-            menu_addslider(postrendercategory_clrmod,8,240,448,32,"Contrast",0,1,0,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_contrast = value end)
-            menu_addslider(postrendercategory_clrmod,8,272,448,32,"MultiplyR",0,1,0,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulr = value end)
-            menu_addslider(postrendercategory_clrmod,8,304,448,32,"MultiplyG",0,1,0,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulg = value end)
-            menu_addslider(postrendercategory_clrmod,8,336,448,32,"MultiplyB",0,1,0,function(slider,value) REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulb = value end)
+            menu_addslider(postrendercategory_clrmod,8,48,448,32,"AddR",0,1,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addr = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addr)end)
+            menu_addslider(postrendercategory_clrmod,8,80,448,32,"AddG",0,1,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addg = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addg)end)
+            menu_addslider(postrendercategory_clrmod,8,112,448,32,"AddB",0,1,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addb = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_addb)end)
+            menu_addslider(postrendercategory_clrmod,8,144,448,32,"Brightness",0,1,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_brightness = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_brightness)end)
+            menu_addslider(postrendercategory_clrmod,8,176,448,32,"Colour",0,1,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_colour = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_colour)end)
+            menu_addslider(postrendercategory_clrmod,8,208,448,32,"Invert",0,1,0,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_inv = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_inv)end)
+            menu_addslider(postrendercategory_clrmod,8,240,448,32,"Contrast",0,2,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_contrast = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_contrast)end)
+            menu_addslider(postrendercategory_clrmod,8,272,448,32,"MultiplyR",0,2,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulr = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulr)end)
+            menu_addslider(postrendercategory_clrmod,8,304,448,32,"MultiplyG",0,2,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulg = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulg)end)
+            menu_addslider(postrendercategory_clrmod,8,336,448,32,"MultiplyB",0,2,2,function(slider,value)REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulb = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.postclrmod.pp_colour_mulb)end)
 end)
 
 hook.Add("AddToolMenuCategories","RealisticVHSEffect2Menu",function()
