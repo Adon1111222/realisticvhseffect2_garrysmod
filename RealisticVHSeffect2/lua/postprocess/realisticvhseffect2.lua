@@ -6,18 +6,29 @@ if not CLIENT then return end
 
 -- terms used in this file:
 --  INTERLACED: Display of frames, when the signal generator produces two half-frames which the TV draws through the lines, adding them on top of each other.
+--   Example:
+--    Progressive   Interlaced
+--       1  2          1  2
+--       3  4          5  6
+--       5  6          3  4
+--       7  8          7  8
 --  OSD: ON-SCREEN-DISPLAY. Its a signal generator that creates its own signal and synchronizes it with the input signal, overlapping the input signal with its own.
---  FRAME-SYNCHRO: Frame synchronization. From this the TV starts drawing the frame. This is vertical sync.
+--  FRAME-SYNC(VERTICAL SYNC): Frame synchronization. From this the TV starts drawing the frame. This is vertical sync.
 --  HORIZONTAL SYNCHRONIZATION: This is the beginning of each line in the frame. If this synchronization is delayed, the line will be shifted.
 --  CHROMA: Colour Channel
 --  LUMA: Brightness Channel
 
 -- If you dont understand something - you should contact more knowledgeable people.
+
+local REALISTICVHSEFFECT2_CFG_LOADING = true -- When editing switch the value to 'false' if you want to change the values in this file.
+
 local cachedcurtime = CurTime()
 local rt = render.GetScreenEffectTexture(0)
 local blurmat = Material("pp/blurx")
-local morphrt = GetRenderTarget("realisticvhseffect2/morphrt2",720,576)
-local morphmat = CreateMaterial("realisticvhseffect2/morphmat2","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = morphrt:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
+local morphrt = GetRenderTarget("realisticvhseffect2/morphrt",720,576)
+local morphmat = CreateMaterial("realisticvhseffect2/morphmat","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = morphrt:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
+local morphrt2 = GetRenderTarget("realisticvhseffect2/morphrt2",720,576)
+local morphmat2 = CreateMaterial("realisticvhseffect2/morphmat2","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = morphrt2:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
 local matred = CreateMaterial("realisticvhseffect2/redmat","UnLitGeneric",{
     ["$basetexture"] = rt:GetName(),
     ["$color2"] = "[1 0 0]",
@@ -43,19 +54,67 @@ local interlacedbufferrt = GetRenderTargetEx("realisticvhseffect2/interlacedbuff
 	bit.bor(2, 256),
 	0,
 	IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer. update 09.06.2025
-local interlacedbuffermat = CreateMaterial("realisticvhseffect2/interlacedbuffermat","UnLitGeneric",{["$basetexture"] = interlacedbufferrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
+local interlacedbuffermat = CreateMaterial("realisticvhseffect2/interlacedbuffermat","UnLitGeneric",{["$basetexture"] = interlacedbufferrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$alpha"] = "1"})
 local interlacedcopyrt = GetRenderTarget("realisticvhseffect2/interlacedcopyrt",ScrW(),ScrH())
 local interlacedcopymat = CreateMaterial("realisticvhseffect2/interlacedcopymat","UnLitGeneric",{["$basetexture"] = interlacedcopyrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
 
 local noisert = GetRenderTarget("realisticvhseffect2/noisert",720,576)
 local noisemat = CreateMaterial("realisticvhseffect2/noisemat","UnLitGeneric",{["$basetexture"] = noisert:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$vertexalpha"] = "1"})
+
+local noiseoverlayrt = GetRenderTarget("realisticvhseffect2/noiseoverlayrt",720,576)
+local noiseoverlaymat = CreateMaterial("realisticvhseffect2/noiseoverlaymat","UnLitGeneric",{["$basetexture"] = noiseoverlayrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$vertexalpha"] = "1"})
+
+-- i have not been able to get this system to work yet, so i will leave it here for a while
+--[[
+local lensdistortionrt = GetRenderTarget("realisticvhseffect2/lensdistortionrt",512,512)
+local lensdistortionmat = CreateMaterial("realisticvhseffect2/lensdistortionmat","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = lensdistortionrt:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
+--lensdistortionmat:SetFloat("$refractamount","-0.125")
+render.PushRenderTarget(lensdistortionrt)
+local cx,cy = 512/2,512/2
+for j = 1,512 do--ScrW() do
+for i = 1,512 do--ScrH() do
+local distx,disty = (i-cx)/255,(j-cy)/255
+local distc = math.sqrt(((i-cx)^2) + ((j-cy)^2))/256
+render.SetViewPort(i,j,1,1)
+render.Clear((distx*255)+127,(disty*255)+127,(distc*255)+127,255,true,true)
+end
+end
+render.PopRenderTarget()
+]]
+
+local screenratio = 4/3--720/576 -- PAL has a large horizontal resolution(possible) and an aspect ratio of 5:4, not 4:3. Fixed
+
 render.PushRenderTarget(morphrt)
 render.Clear(127,127,0,255,true,true)
+render.PopRenderTarget()
+render.PushRenderTarget(morphrt2)
+render.Clear(127,127,0,255,true,true)
+render.PopRenderTarget()
+
+render.PushRenderTarget(noiseoverlayrt)
+render.Clear(0,0,0,255,true,true)
+for y = 0,576 do
+    for x = math.random(0,20),720,20 do
+        render.SetViewPort(x,y,20,1)
+        if math.random(0,1) == 1 then
+            render.Clear(255,255,255,255,true,true)
+        else
+            render.Clear(0,0,0,255,true,true)
+        end
+    end
+end
 render.PopRenderTarget()
 
 REALISTICVHSEFFECT2_CFG = {}
 
-REALISTICVHSEFFECT2_CFG.enabled = true
+local REALISTICVHSEFFECT2_CFG_enabled = CreateClientConVar("realisticvhseffect2_enabled", "0", true, false, nil, 0, 1 )
+local REALISTICVHSEFFECT2_CFG_autodisable = CreateClientConVar("realisticvhseffect2_autodisable", "0", true, false, nil, 0, 1 )
+
+local REALISTICVHSEFFECT2_CFG_osdautocurtime = CreateClientConVar("realisticvhseffect2_osdautocurtime", "0", true, false, nil, 0, 1 )
+
+if REALISTICVHSEFFECT2_CFG_autodisable:GetInt() == 1 then
+     REALISTICVHSEFFECT2_CFG_enabled:SetInt(0)
+end
 
 REALISTICVHSEFFECT2_CFG.currenthookclass = "PostDrawHUD"
 
@@ -63,7 +122,7 @@ REALISTICVHSEFFECT2_CFG.framesynchro = 576
 REALISTICVHSEFFECT2_CFG.shuttlering = 0
 REALISTICVHSEFFECT2_CFG.paused = false
 
-REALISTICVHSEFFECT2_CFG.testtable = nil
+REALISTICVHSEFFECT2_CFG.testtable = nil-- = Material("crt_testpicture_full.png")
 
 REALISTICVHSEFFECT2_CFG.osd = {
     middletext = nil,
@@ -73,7 +132,7 @@ REALISTICVHSEFFECT2_CFG.osd = {
     days = 9,
     months = 1,
     years = 2025,
-    fixsize = {m = {" ",2},s = {"0",2},ms = {" ",4},f = {"0",2}}, -- fixed size
+    fixsize = {m = {" ",2},s = {"0",2},ms = {" ",4},f = {"0",2},h = {" ",2},h12 = {" ",2}}, -- fixed size
     dateenabled = true,
     datepos = 3,
     -- 1: LEFTTOP;2: RIGHTTOP;3:LEFTDOWN;4:RIGHTDOWN;
@@ -90,6 +149,9 @@ REALISTICVHSEFFECT2_CFG.osd = {
         ["%d"] = "Days",
         ["%m"] = "Months",
         ["%y"] = "Years",
+        
+        ["%h12"] = "Hours12",
+        ["%mer"] = "Meridiem",
     }
 }
 
@@ -106,10 +168,12 @@ REALISTICVHSEFFECT2_CFG.postclrmod = {
     ["pp_colour_mulb"] = 0,
 }
 REALISTICVHSEFFECT2_CFG.viewtype = 1
-REALISTICVHSEFFECT2_CFG.wave = {enabled = true,freq = 4,detail = 2,amp = 0.025}
+local REALISTICVHSEFFECT2_CFG_dspenabled = CreateClientConVar("realisticvhseffect2_dspenabled", "0", true, false, nil, 0, 1 )
+REALISTICVHSEFFECT2_CFG.wave = {enabled = true,freq = 4,detail = 2,amp = 0.025,noise = 0}
+REALISTICVHSEFFECT2_CFG.lines = {enabled = true,amp = 2,bottomline = {enabled = false,height = 8,amp = 5,noise = 0,randamp = 4,randclr = 0},upperline = {enabled = false,height = 64,scale = -0.1,noise = 0,randamp = 0}}
 REALISTICVHSEFFECT2_CFG.sharpen = {enabled = true,size = 1,value = 3}
 REALISTICVHSEFFECT2_CFG.cameraclrdist = {r = 0,g = 0,b = 0}
-REALISTICVHSEFFECT2_CFG.interlaced = {enabled = true,pos = 0}
+REALISTICVHSEFFECT2_CFG.interlaced = {enabled = true,pos = 0,blend = 1}
 REALISTICVHSEFFECT2_CFG.channelssettings = {
     chroma_line_drop = false,
     chroma_line_drop_maxdrops = 1,
@@ -126,6 +190,15 @@ REALISTICVHSEFFECT2_CFG.channelssettings = {
     luma_noise_alpha = 0.025,
 }
 REALISTICVHSEFFECT2_CFG.comets = {factor = 50000,enabled = false,size = 0.5}
+REALISTICVHSEFFECT2_CFG.noise_overlay = {
+    enabled = false,
+    gapenabled = false,
+    gappos = 0.5,
+    gapsize = 0.25,
+    gapanim = true,
+}
+
+REALISTICVHSEFFECT2_CFG_DEFAULT = table.Copy(REALISTICVHSEFFECT2_CFG)
 
 local function cfg_readstring(cfile)
     return cfile:Read(cfile:ReadByte())
@@ -157,23 +230,25 @@ local function LoadCFG()
     local cfile = file.Open("realisticvhseffect2cfg.dat","rb","DATA")
     if cfile then
         if cfile:Read(9) == "RVHSE2CFG" then
-            cfile:Skip(4)
+            cfile:Skip(4) -- skip date stamp
             local name,data = cfg_readdata(cfile)
             if name == "REALISTICVHSEFFECT2_CFG" then
-                REALISTICVHSEFFECT2_CFG = data
+                for k,v in pairs(data) do
+                    REALISTICVHSEFFECT2_CFG[k] = v
+                end
             end
         end
         cfile:Close()
     end
 end
 
-LoadCFG()
+if REALISTICVHSEFFECT2_CFG_LOADING then LoadCFG() end
 
 -- OSD support
 
 local osdfontsize = math.min(ScrH()/8,ScrW()/8)
 surface.CreateFont("RealisticVHSEffect2Font", {
-    font = "Real Vhs Font",
+    font = "Real Vhs Font", -- this font is not monospaced for some reason
     extended = false, -- this font only supports ascii set
     size = osdfontsize,
     weight = 500,
@@ -216,7 +291,7 @@ local function getdateosd_value(val,type)
 end
 
 local realframetime = 0
-local function formattostring(tbl,y,m,d,h,mi,s,ms,f)
+local function formattostring(tbl,y,m,d,h,mi,s,ms,f,h12,mer)
     local str = ""
     for k,v in pairs(tbl) do
         if v == "%y" then str = str .. y       -- years
@@ -227,6 +302,9 @@ local function formattostring(tbl,y,m,d,h,mi,s,ms,f)
         elseif v == "%s" then str = str .. s   -- seconds
         elseif v == "%ms" then str = str .. ms -- miliseconds
         elseif v == "%f" then str = str .. f   -- frames
+
+        elseif v == "%h12" then str = str .. h12  -- hours 12-based
+        elseif v == "%mer" then str = str .. mer  -- meridiem
         else str = str .. v end                -- raw
     end
     return str
@@ -254,11 +332,25 @@ local function getdateosd()
             end
         end
     end
+    local mer = "ER"
+    local hours12 = 0
+    if REALISTICVHSEFFECT2_CFG.osd.hours < 12 then
+        mer = "AM"
+        hours12 = REALISTICVHSEFFECT2_CFG.osd.hours
+    else
+        mer = "PM"
+        hours12 = REALISTICVHSEFFECT2_CFG.osd.hours - 12
+    end
+    if hours12 == 0 then
+        hours12 = 12
+    end
+
     return formattostring(REALISTICVHSEFFECT2_CFG.osd.datetbl,getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.years,"y"),
     getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.months,"m"),getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.days,"d"),
     getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.hours,"h"),getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.minutes,"mi"),
     getdateosd_value(math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds),"s"),getdateosd_value(math.floor((REALISTICVHSEFFECT2_CFG.osd.seconds-math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds))*1000),"ms"), -- seconds and miliseconds
-    getdateosd_value(math.floor((REALISTICVHSEFFECT2_CFG.osd.seconds-math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds))*25),"f")) -- frames(25 f-fps)
+    getdateosd_value(math.floor((REALISTICVHSEFFECT2_CFG.osd.seconds-math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds))*25),"f"), -- frames(25 f-fps)
+    getdateosd_value(hours12,"h12"),getdateosd_value(mer,"mer")) -- hours 12-based and meridiem
 end
 
 local function draw_osdtext(a,b,c,d,e,f,g)
@@ -275,27 +367,27 @@ local function addosd()
             datex = ScrW()/8
             datey = ScrH()/6
             if REALISTICVHSEFFECT2_CFG.viewtype == 2 then -- fix cropping date
-                datex = ((ScrW()-(ScrW()/1.25))/2)+(ScrW()/16)
+                datex = ((ScrW()-(ScrW()/screenratio))/2)+(ScrW()/16)
             end
         elseif REALISTICVHSEFFECT2_CFG.osd.datepos == 2 then -- right up
             datealign = TEXT_ALIGN_RIGHT
             datex = ScrW()-(ScrW()/8)
             datey = ScrH()/6
             if REALISTICVHSEFFECT2_CFG.viewtype == 2 then -- fix cropping date
-                datex = ((ScrW()-(ScrW()/1.25))/2)+(ScrW()/16)
+                datex = ScrW()-((((ScrW()/screenratio))/2)-(ScrW()/4))
             end
-        elseif REALISTICVHSEFFECT2_CFG.osd.datepos == 3 then -- left dwon
+        elseif REALISTICVHSEFFECT2_CFG.osd.datepos == 3 then -- left down
             datex = ScrW()/8
             datey = ScrH()/1.4
             if REALISTICVHSEFFECT2_CFG.viewtype == 2 then -- fix cropping date
-                datex = ((ScrW()-(ScrW()/1.25))/2)+(ScrW()/16)
+                datex = ((ScrW()-(ScrW()/screenratio))/2)+(ScrW()/16)
             end
         elseif REALISTICVHSEFFECT2_CFG.osd.datepos == 4 then -- right down
             datealign = TEXT_ALIGN_RIGHT
             datex = ScrW()-(ScrW()/8)
             datey = ScrH()/1.4
             if REALISTICVHSEFFECT2_CFG.viewtype == 2 then -- fix cropping date
-                datex = ((ScrW()-(ScrW()/1.25))/2)+(ScrW()/16)
+                datex = ScrW()-((((ScrW()/screenratio))/2)-(ScrW()/4))
             end
         end
         local datetbl = string.Explode("\n",getdateosd())
@@ -317,7 +409,7 @@ end
 -- Horizontal Synchronization Support
 
 local function getwavex(i,shift,initval)
-    local val = initval
+    local val = initval + math.Rand(0,REALISTICVHSEFFECT2_CFG.wave.noise)
     for j = 1,REALISTICVHSEFFECT2_CFG.wave.detail do
         val = val + (math.sin((i/64)+(cachedcurtime*(REALISTICVHSEFFECT2_CFG.wave.freq*j))*shift)/j)
     end
@@ -349,6 +441,77 @@ local function updatemorphrt()
         end
     end
     render.PopRenderTarget()
+end
+
+local function getwavex2(upscaleinit,btscaleinit,i)
+    local up_height = 0
+    local up_scale = 0
+    if REALISTICVHSEFFECT2_CFG.lines.upperline.enabled then
+        up_height = REALISTICVHSEFFECT2_CFG.lines.upperline.height -- 64
+        up_scale = upscaleinit -- -0.1
+        up_scale = up_scale + math.Rand(0,REALISTICVHSEFFECT2_CFG.lines.upperline.noise) -- 0.1
+    end
+    local bt_height = 0
+    local bt_scale = 0
+    if REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled then
+        bt_height = REALISTICVHSEFFECT2_CFG.lines.bottomline.height -- 8
+        bt_scale = btscaleinit -- 5
+        bt_scale = bt_scale + math.Rand(0,REALISTICVHSEFFECT2_CFG.lines.bottomline.noise)
+    end
+    return (((math.max((up_height-i)/20,0)^2)*up_scale)-((math.max((i-(307-bt_height))/bt_height,0))*bt_scale))*10 -- 288+16
+end
+
+local function updatemorphrt2()
+    local upscale = REALISTICVHSEFFECT2_CFG.lines.upperline.scale+math.Rand(0,REALISTICVHSEFFECT2_CFG.lines.upperline.randamp)
+    local btscale = math.Rand(0,REALISTICVHSEFFECT2_CFG.lines.bottomline.randamp)+REALISTICVHSEFFECT2_CFG.lines.bottomline.amp
+    render.PushRenderTarget(morphrt2)
+        render.Clear(127,127,0,255,true,true)
+        for i = 1,576 do
+            render.SetViewPort(0,i,720,1)
+            --if i > 307 then
+            --    render.Clear(255,127,0,255,true,true)
+            --else
+                render.Clear(127+getwavex2(upscale,btscale,i),127,0,255,true,true)
+            --end
+        end
+    render.PopRenderTarget()
+end
+
+--
+
+local function fillwithnoise(ystart,yend)
+    surface.SetMaterial(noiseoverlaymat)
+    surface.SetDrawColor(255,255,255)
+    local ox,oy = math.Rand(0.125,1),math.Rand(0.75,1)
+    if math.random(0,1) == 1 then
+        surface.DrawTexturedRectUV(0,ystart,720,yend,0,0,ox,oy)
+    else
+        surface.DrawTexturedRectUV(0,ystart,720,yend,1-ox,0,ox,oy)
+    end
+end
+
+local function drawnoiseoverlay()
+    if REALISTICVHSEFFECT2_CFG.noise_overlay.gapenabled then
+        local gapstart = 576*REALISTICVHSEFFECT2_CFG.noise_overlay.gappos
+        local gapsize = 576*REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize
+        fillwithnoise(0,gapstart)
+        fillwithnoise(gapstart+gapsize,576-(gapstart+gapsize))
+        -- this is a very bad animation that only partially corresponds to reality, but if i try to fix it, i will make it even worse
+        if REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim then
+            REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize = math.Clamp(REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize+((RealFrameTime()/40)),0,1)
+            if REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize == 1 then
+                REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = math.Clamp((REALISTICVHSEFFECT2_CFG.noise_overlay.gappos-(RealFrameTime()/20)),0,1)
+            else
+                if REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize*10 % 1 > math.Round(REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize*10)/20 then
+                    REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = math.Clamp((REALISTICVHSEFFECT2_CFG.noise_overlay.gappos-(RealFrameTime()/20)),0,1)
+                else
+                    REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = math.Clamp((REALISTICVHSEFFECT2_CFG.noise_overlay.gappos+(RealFrameTime()/20)),0,1)
+                end
+            end
+        end
+    else
+        fillwithnoise(0,577)
+    end
 end
 
 --
@@ -400,6 +563,7 @@ local function drawcomets()
         render.UpdateScreenEffectTexture(0)
     end
 end
+local bottomlineclr = Color(0,0,0,0)
 
 local function addblur()
     render.OverrideAlphaWriteEnable(true,false)
@@ -435,6 +599,17 @@ local function addblur()
                 render.Clear(0,0,0,0,true,true)
             end
         end
+        if REALISTICVHSEFFECT2_CFG.lines.enabled then
+        if REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled then
+        if REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr ~= 0 then
+            local btheight = REALISTICVHSEFFECT2_CFG.lines.bottomline.height*(ScrH()/576)
+            draw.RoundedBox(0,0,576-btheight,720,btheight,bottomlineclr)
+            if not REALISTICVHSEFFECT2_CFG.interlaced.enabled or (REALISTICVHSEFFECT2_CFG.interlaced.enabled and REALISTICVHSEFFECT2_CFG.interlaced.pos == 0) then
+                bottomlineclr = Color(math.random(0,255),math.random(0,255),math.random(0,255),math.Round(REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr*255))
+            end
+        end
+        end
+        end
         render.PopRenderTarget()
     end
 
@@ -458,6 +633,7 @@ end
 local function renderinterlacing()
     if REALISTICVHSEFFECT2_CFG.interlaced.enabled then
         -- principle: buffer frame 1 and draw frame 2 on it
+        render.SetWriteDepthToDestAlpha(false)
         render.UpdateScreenEffectTexture(0)
         if REALISTICVHSEFFECT2_CFG.interlaced.pos == 1 then
             REALISTICVHSEFFECT2_CFG.interlaced.pos = 0
@@ -490,12 +666,13 @@ local function renderinterlacing()
 
         render.SetStencilCompareFunction(STENCILCOMPARISONFUNCTION_EQUAL)
         render.SetStencilFailOperation(STENCILOPERATION_KEEP)
-        
+        interlacedbuffermat:SetFloat("$alpha",REALISTICVHSEFFECT2_CFG.interlaced.blend)
         render.SetMaterial(interlacedbuffermat)
         render.DrawScreenQuad()
 
         render.SetStencilEnable(false)
         render.UpdateScreenEffectTexture(0)
+        render.SetWriteDepthToDestAlpha(true)
     end
 end
 
@@ -503,12 +680,39 @@ local lastquery = 0
 
 local lastsavedtime = 0
 
+local olddspenabled = REALISTICVHSEFFECT2_CFG_dspenabled:GetBool()
+
 local function rendervhseffect()
-    if not REALISTICVHSEFFECT2_CFG.enabled then return end
+    if not REALISTICVHSEFFECT2_CFG_enabled:GetBool() then return end
     if SysTime()-lastsavedtime > 60 then
         RunConsoleCommand("realisticvhseffect2_savecfg","")
         lastsavedtime = SysTime()
     end
+    if REALISTICVHSEFFECT2_CFG_dspenabled:GetBool() then
+        -- If anyone knows how to create custom preset, please tell me.
+        LocalPlayer():SetDSP(14) -- Water S
+        olddspenabled = true
+    else
+        if olddspenabled then
+            LocalPlayer():SetDSP(1) -- remove DSP
+        end
+        olddspenabled = false
+    end
+    if REALISTICVHSEFFECT2_CFG_osdautocurtime:GetBool() then
+        local osdatereturn = os.date("*t")
+        REALISTICVHSEFFECT2_CFG.osd.hours = osdatereturn.hour
+        REALISTICVHSEFFECT2_CFG.osd.minutes = osdatereturn.min
+        REALISTICVHSEFFECT2_CFG.osd.seconds = osdatereturn.sec
+        REALISTICVHSEFFECT2_CFG.osd.days = osdatereturn.day
+        REALISTICVHSEFFECT2_CFG.osd.months = osdatereturn.month
+        REALISTICVHSEFFECT2_CFG.osd.years = osdatereturn.year
+    end
+    render.UpdateScreenEffectTexture(0)
+    --[[
+    render.SetMaterial(lensdistortionmat)
+    render.DrawScreenQuadEx(-ScrW()/2,-ScrH()/2,ScrW()*2,ScrH()*2)
+    render.UpdateScreenEffectTexture(0)
+    --]]
     if REALISTICVHSEFFECT2_CFG.testtable then
         render.SetMaterial(REALISTICVHSEFFECT2_CFG.testtable)
         render.DrawScreenQuad()
@@ -522,6 +726,7 @@ local function rendervhseffect()
             render.DrawScreenQuadEx(-REALISTICVHSEFFECT2_CFG.cameraclrdist.g,-REALISTICVHSEFFECT2_CFG.cameraclrdist.g,ScrW()+REALISTICVHSEFFECT2_CFG.cameraclrdist.g,ScrH()+REALISTICVHSEFFECT2_CFG.cameraclrdist.g)
             render.SetMaterial(matblue)
             render.DrawScreenQuadEx(-REALISTICVHSEFFECT2_CFG.cameraclrdist.b,-REALISTICVHSEFFECT2_CFG.cameraclrdist.b,ScrW()+REALISTICVHSEFFECT2_CFG.cameraclrdist.b,ScrH()+REALISTICVHSEFFECT2_CFG.cameraclrdist.b)
+            render.UpdateScreenEffectTexture(0)
             colormod:SetFloat("$pp_colour_brightness",0)colormod:SetFloat("$pp_colour_contrast",0.82)colormod:SetFloat("$pp_colour_colour",1)
             render.SetMaterial(colormod)
             render.DrawScreenQuad()
@@ -531,6 +736,9 @@ local function rendervhseffect()
     end
     if REALISTICVHSEFFECT2_CFG.wave.enabled then
         updatemorphrt()
+    end
+    if REALISTICVHSEFFECT2_CFG.lines.enabled then
+        updatemorphrt2()
     end
 
     addosd()
@@ -556,6 +764,13 @@ local function rendervhseffect()
         morphmat:SetFloat("$refractamount",REALISTICVHSEFFECT2_CFG.wave.amp/2)
         render.SetMaterial(morphmat)
         render.DrawScreenQuad()
+        render.UpdateScreenEffectTexture(0)
+    end
+    if REALISTICVHSEFFECT2_CFG.lines.enabled then
+        morphmat2:SetFloat("$refractamount",REALISTICVHSEFFECT2_CFG.lines.amp/2)
+        render.SetMaterial(morphmat2)
+        render.DrawScreenQuad()
+        render.UpdateScreenEffectTexture(0)
     end
     if REALISTICVHSEFFECT2_CFG.shuttlering ~= 0 then
         for i = 1,2 do
@@ -575,6 +790,11 @@ local function rendervhseffect()
             end
         end
     end
+
+    if REALISTICVHSEFFECT2_CFG.noise_overlay.enabled then
+        drawnoiseoverlay()
+    end
+
     -- Back to original resolution
     addblur()
     if REALISTICVHSEFFECT2_CFG.sharpen.enabled then
@@ -601,15 +821,15 @@ local function rendervhseffect()
     end
     if REALISTICVHSEFFECT2_CFG.viewtype == 1 then
         -- resizing
-        draw.RoundedBox(0,0,0,ScrW(),ScrH(),Color(0,0,0))
+        draw.RoundedBox(0,-1,-1,ScrW()+1,ScrH()+1,Color(0,0,0))
         blurmat:SetTexture("$basetexture",rt)
         blurmat:SetFloat("$size",0)
         render.SetMaterial(blurmat)
-        render.DrawScreenQuadEx((ScrW()-(ScrW()/1.25))/2,0,ScrW()/1.25,ScrH())
+        render.DrawScreenQuadEx((ScrW()-(ScrW()/screenratio))/2,0,ScrW()/screenratio,ScrH())
         render.UpdateScreenEffectTexture(0)
     elseif REALISTICVHSEFFECT2_CFG.viewtype == 2 then
         -- cropping
-        local cropwidth = (ScrW()-(ScrW()/1.25))/2
+        local cropwidth = (ScrW()-(ScrW()/screenratio))/2
         draw.RoundedBox(0,0,0,cropwidth,ScrH(),Color(0,0,0))
         draw.RoundedBox(0,ScrW()-cropwidth,0,cropwidth,ScrH(),Color(0,0,0))
         render.UpdateScreenEffectTexture(0)
@@ -678,5 +898,25 @@ concommand.Add("realisticvhseffect2_savecfg",function()
     cfile:Close()
 end)
 concommand.Add("realisticvhseffect2_loadcfg",LoadCFG)
+
+concommand.Add("realisticvhseffect2_noiseoverlay_startanim",function(_,_,args)
+    local gapposstr = args[1]
+    local gapsizestr = args[2]
+    if not gapposstr or not gapsizestr then
+        print("Use: float gapPos float gapSize")
+        return
+    end
+    local gappos = tonumber(gapposstr)
+    local gapsize = tonumber(gapsizestr)
+    if not gappos or not gapsize then
+        print("Use: float gapPos float gapSize")
+        return
+    end
+    REALISTICVHSEFFECT2_CFG.noiseoverlay.enabled = true
+    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapenabled = true
+    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapanim = true
+    REALISTICVHSEFFECT2_CFG.noiseoverlay.gappos = gappos
+    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapsize = gapsize
+end)
 
 include("realisticvhseffect2_menu.lua")
