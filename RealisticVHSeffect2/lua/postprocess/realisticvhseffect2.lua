@@ -20,7 +20,7 @@ if not CLIENT then return end
 
 -- If you dont understand something - you should contact more knowledgeable people.
 
-local REALISTICVHSEFFECT2_CFG_LOADING = true -- When editing switch the value to 'false' if you want to change the values in this file.
+local REALISTICVHSEFFECT2_CFG_LOADING = true -- When editing switch the value to 'false' if you want to change the values in this file. this also disables automatic config saving.
 
 local cachedcurtime = CurTime()
 local rt = render.GetScreenEffectTexture(0)
@@ -61,8 +61,13 @@ local interlacedcopymat = CreateMaterial("realisticvhseffect2/interlacedcopymat"
 local noisert = GetRenderTarget("realisticvhseffect2/noisert",720,576)
 local noisemat = CreateMaterial("realisticvhseffect2/noisemat","UnLitGeneric",{["$basetexture"] = noisert:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$vertexalpha"] = "1"})
 
-local noiseoverlayrt = GetRenderTarget("realisticvhseffect2/noiseoverlayrt",720,576)
-local noiseoverlaymat = CreateMaterial("realisticvhseffect2/noiseoverlaymat","UnLitGeneric",{["$basetexture"] = noiseoverlayrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$vertexalpha"] = "1"})
+local noiseoverlayrt = GetRenderTargetEx("realisticvhseffect2/noiseoverlayrt3",720,576,
+	RT_SIZE_NO_CHANGE,
+	3,
+	bit.bor(2, 256),
+	0,
+	IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer.
+local noiseoverlaymat = CreateMaterial("realisticvhseffect2/noiseoverlaymat3","UnLitGeneric",{["$basetexture"] = noiseoverlayrt:GetName()})
 
 -- i have not been able to get this system to work yet, so i will leave it here for a while
 --[[
@@ -72,25 +77,28 @@ local lensdistortionmat = CreateMaterial("realisticvhseffect2/lensdistortionmat"
 render.PushRenderTarget(lensdistortionrt)
 local cx,cy = 512/2,512/2
 for j = 1,512 do--ScrW() do
-for i = 1,512 do--ScrH() do
-local distx,disty = (i-cx)/255,(j-cy)/255
-local distc = math.sqrt(((i-cx)^2) + ((j-cy)^2))/256
-render.SetViewPort(i,j,1,1)
-render.Clear((distx*255)+127,(disty*255)+127,(distc*255)+127,255,true,true)
-end
+    for i = 1,512 do--ScrH() do
+        local distx,disty = (i-cx)/255,(j-cy)/255
+        local distc = math.sqrt(((i-cx)^2) + ((j-cy)^2))/256
+        render.SetViewPort(i,j,1,1)
+        render.Clear((distx*255)+127,(disty*255)+127,(distc*255)+127,255,true,true)
+    end
 end
 render.PopRenderTarget()
 ]]
 
 local screenratio = 4/3--720/576 -- PAL has a large horizontal resolution(possible) and an aspect ratio of 5:4, not 4:3. Fixed
 
+-- prepare wave and lines
 render.PushRenderTarget(morphrt)
 render.Clear(127,127,0,255,true,true)
 render.PopRenderTarget()
 render.PushRenderTarget(morphrt2)
 render.Clear(127,127,0,255,true,true)
 render.PopRenderTarget()
+--
 
+-- fill the buffer for noise overlay
 render.PushRenderTarget(noiseoverlayrt)
 render.Clear(0,0,0,255,true,true)
 for y = 0,576 do
@@ -104,9 +112,11 @@ for y = 0,576 do
     end
 end
 render.PopRenderTarget()
+--
 
 REALISTICVHSEFFECT2_CFG = {}
 
+-- these variables have been moved to convars due to their use, this may be useful in the future
 local REALISTICVHSEFFECT2_CFG_enabled = CreateClientConVar("realisticvhseffect2_enabled", "0", true, false, nil, 0, 1 )
 local REALISTICVHSEFFECT2_CFG_autodisable = CreateClientConVar("realisticvhseffect2_autodisable", "0", true, false, nil, 0, 1 )
 
@@ -115,6 +125,7 @@ local REALISTICVHSEFFECT2_CFG_osdautocurtime = CreateClientConVar("realisticvhse
 if REALISTICVHSEFFECT2_CFG_autodisable:GetInt() == 1 then
      REALISTICVHSEFFECT2_CFG_enabled:SetInt(0)
 end
+--
 
 REALISTICVHSEFFECT2_CFG.currenthookclass = "PostDrawHUD"
 
@@ -167,24 +178,26 @@ REALISTICVHSEFFECT2_CFG.postclrmod = {
     ["pp_colour_mulg"] = 0,
     ["pp_colour_mulb"] = 0,
 }
+REALISTICVHSEFFECT2_CFG.presize = true
 REALISTICVHSEFFECT2_CFG.viewtype = 1
 local REALISTICVHSEFFECT2_CFG_dspenabled = CreateClientConVar("realisticvhseffect2_dspenabled", "0", true, false, nil, 0, 1 )
 REALISTICVHSEFFECT2_CFG.wave = {enabled = true,freq = 4,detail = 2,amp = 0.025,noise = 0}
-REALISTICVHSEFFECT2_CFG.lines = {enabled = true,amp = 2,bottomline = {enabled = false,height = 8,amp = 5,noise = 0,randamp = 4,randclr = 0},upperline = {enabled = false,height = 64,scale = -0.1,noise = 0,randamp = 0}}
+REALISTICVHSEFFECT2_CFG.lines = {enabled = false,amp = 2,bottomline = {enabled = false,height = 8,amp = 5,noise = 0,randamp = 4,randclr = 0},upperline = {enabled = false,height = 64,scale = -0.1,noise = 0,randamp = 0}}
 REALISTICVHSEFFECT2_CFG.sharpen = {enabled = true,size = 1,value = 3}
 REALISTICVHSEFFECT2_CFG.cameraclrdist = {r = 0,g = 0,b = 0}
 REALISTICVHSEFFECT2_CFG.interlaced = {enabled = true,pos = 0,blend = 1}
+-- please note that the variable is called channelssettings, not channelsettings
 REALISTICVHSEFFECT2_CFG.channelssettings = {
     chroma_line_drop = false,
     chroma_line_drop_maxdrops = 1,
     chroma_blur = 4,
-    chroma_noise_enabled = true,
+    chroma_noise_enabled = false,--true,
     chroma_noise_scalex = 16,
     chroma_noise_scaley = 8,
     chroma_noise_alpha = 0.004125,
     
     general_blur = 1.5,
-    luma_noise_enabled = true,
+    luma_noise_enabled = false,--true,
     luma_noise_scalex = 32,
     luma_noise_scaley = 18,
     luma_noise_alpha = 0.025,
@@ -195,9 +208,16 @@ REALISTICVHSEFFECT2_CFG.noise_overlay = {
     gapenabled = false,
     gappos = 0.5,
     gapsize = 0.25,
-    gapanim = true,
+    gapanim = false,
 }
 
+
+-- please, do not copy this table using direct assignment,
+-- since you are not copying the table, but a pointer to it.
+-- in fact, any action on the copy of the table will be reflected in the original table!
+-- The correct example is:
+-- REALISTICVHSEFFECT2_CFG = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT)
+-- the same for child elements.
 REALISTICVHSEFFECT2_CFG_DEFAULT = table.Copy(REALISTICVHSEFFECT2_CFG)
 
 local function cfg_readstring(cfile)
@@ -481,21 +501,21 @@ end
 
 local function fillwithnoise(ystart,yend)
     surface.SetMaterial(noiseoverlaymat)
-    surface.SetDrawColor(255,255,255)
+    surface.SetDrawColor(255,255,255,255)
     local ox,oy = math.Rand(0.125,1),math.Rand(0.75,1)
     if math.random(0,1) == 1 then
-        surface.DrawTexturedRectUV(0,ystart,720,yend,0,0,ox,oy)
+        surface.DrawTexturedRectUV(0,ystart,ScrW(),yend,0,oy,ox,oy+(1/(ScrH()/yend)))
     else
-        surface.DrawTexturedRectUV(0,ystart,720,yend,1-ox,0,ox,oy)
+        surface.DrawTexturedRectUV(0,ystart,ScrW(),yend,1-ox,oy,ox,oy+(1/(ScrH()/yend)))
     end
 end
 
 local function drawnoiseoverlay()
     if REALISTICVHSEFFECT2_CFG.noise_overlay.gapenabled then
-        local gapstart = 576*REALISTICVHSEFFECT2_CFG.noise_overlay.gappos
-        local gapsize = 576*REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize
+        local gapstart = ScrH()*REALISTICVHSEFFECT2_CFG.noise_overlay.gappos
+        local gapsize = ScrH()*REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize
         fillwithnoise(0,gapstart)
-        fillwithnoise(gapstart+gapsize,576-(gapstart+gapsize))
+        fillwithnoise(gapstart+gapsize,ScrH()-(gapstart+gapsize))
         -- this is a very bad animation that only partially corresponds to reality, but if i try to fix it, i will make it even worse
         if REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim then
             REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize = math.Clamp(REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize+((RealFrameTime()/40)),0,1)
@@ -509,8 +529,10 @@ local function drawnoiseoverlay()
                 end
             end
         end
+        render.UpdateScreenEffectTexture(0)
     else
-        fillwithnoise(0,577)
+        fillwithnoise(0,ScrH())
+        render.UpdateScreenEffectTexture(0)
     end
 end
 
@@ -520,7 +542,7 @@ local function updatenoisert(chroma)
     -- i know that i can buffer all this, but it will take up more memory space, right?
     render.PushRenderTarget(noisert)
     render.Clear(0,0,0,0,true,true)
-    if chroma then
+    if chroma then -- chroma noise is very resource-intensive! when it is turned on, the FPS drops from 150 to 70
         local scalex = 720/REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scalex
         for y = 1,576/REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scaley do
             for x = 0,scalex do
@@ -582,7 +604,7 @@ local function addblur()
 
     -- now add some colours
     
-    if REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled or REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop then
+    if REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled or REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop or (REALISTICVHSEFFECT2_CFG.lines.enabled and REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled and REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr ~= 0) then
         if REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled then
             updatenoisert(true)
         end
@@ -600,15 +622,15 @@ local function addblur()
             end
         end
         if REALISTICVHSEFFECT2_CFG.lines.enabled then
-        if REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled then
-        if REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr ~= 0 then
-            local btheight = REALISTICVHSEFFECT2_CFG.lines.bottomline.height*(ScrH()/576)
-            draw.RoundedBox(0,0,576-btheight,720,btheight,bottomlineclr)
-            if not REALISTICVHSEFFECT2_CFG.interlaced.enabled or (REALISTICVHSEFFECT2_CFG.interlaced.enabled and REALISTICVHSEFFECT2_CFG.interlaced.pos == 0) then
-                bottomlineclr = Color(math.random(0,255),math.random(0,255),math.random(0,255),math.Round(REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr*255))
+            if REALISTICVHSEFFECT2_CFG.lines.bottomline.enabled then
+                if REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr ~= 0 then
+                    local btheight = REALISTICVHSEFFECT2_CFG.lines.bottomline.height*(ScrH()/576)
+                    draw.RoundedBox(0,0,576-btheight,720,btheight,bottomlineclr)
+                    if not REALISTICVHSEFFECT2_CFG.interlaced.enabled or (REALISTICVHSEFFECT2_CFG.interlaced.enabled and REALISTICVHSEFFECT2_CFG.interlaced.pos == 0) then
+                        bottomlineclr = Color(math.random(0,255),math.random(0,255),math.random(0,255),math.Round(REALISTICVHSEFFECT2_CFG.lines.bottomline.randclr*255))
+                    end
+                end
             end
-        end
-        end
         end
         render.PopRenderTarget()
     end
@@ -684,9 +706,11 @@ local olddspenabled = REALISTICVHSEFFECT2_CFG_dspenabled:GetBool()
 
 local function rendervhseffect()
     if not REALISTICVHSEFFECT2_CFG_enabled:GetBool() then return end
-    if SysTime()-lastsavedtime > 60 then
-        RunConsoleCommand("realisticvhseffect2_savecfg","")
-        lastsavedtime = SysTime()
+    if REALISTICVHSEFFECT2_CFG_LOADING then -- do not save the config file with default settings
+        if SysTime()-lastsavedtime > 60 then
+            RunConsoleCommand("realisticvhseffect2_savecfg","")
+            lastsavedtime = SysTime()
+        end
     end
     if REALISTICVHSEFFECT2_CFG_dspenabled:GetBool() then
         -- If anyone knows how to create custom preset, please tell me.
@@ -741,6 +765,14 @@ local function rendervhseffect()
         updatemorphrt2()
     end
 
+    if REALISTICVHSEFFECT2_CFG.presize then
+        blurmat:SetTexture("$basetexture",rt)
+        blurmat:SetFloat("$size",0)
+        render.SetMaterial(blurmat)
+        render.DrawScreenQuadEx(-(ScrW()/screenratio)/4,0,ScrW()+((ScrW()/screenratio)/2),ScrH())
+        render.UpdateScreenEffectTexture(0)
+    end
+
     addosd()
     
     render.UpdateScreenEffectTexture(0)
@@ -764,6 +796,8 @@ local function rendervhseffect()
         morphmat:SetFloat("$refractamount",REALISTICVHSEFFECT2_CFG.wave.amp/2)
         render.SetMaterial(morphmat)
         render.DrawScreenQuad()
+        draw.RoundedBox(0,-2,0,4,576,Color(0,0,0))
+        draw.RoundedBox(0,720,0,ScrW()-720,576,Color(0,0,0))
         render.UpdateScreenEffectTexture(0)
     end
     if REALISTICVHSEFFECT2_CFG.lines.enabled then
@@ -791,10 +825,6 @@ local function rendervhseffect()
         end
     end
 
-    if REALISTICVHSEFFECT2_CFG.noise_overlay.enabled then
-        drawnoiseoverlay()
-    end
-
     -- Back to original resolution
     addblur()
     if REALISTICVHSEFFECT2_CFG.sharpen.enabled then
@@ -810,6 +840,9 @@ local function rendervhseffect()
     render.SetMaterial(colormod)
     render.DrawScreenQuad()
     render.UpdateScreenEffectTexture(0)
+    if REALISTICVHSEFFECT2_CFG.noise_overlay.enabled then
+        drawnoiseoverlay()
+    end
     if REALISTICVHSEFFECT2_CFG.framesynchro > 0 then
         draw.RoundedBox(0,0,0,ScrW(),ScrH(),Color(0,0,0))
         blurmat:SetTexture("$basetexture",rt)
@@ -912,11 +945,11 @@ concommand.Add("realisticvhseffect2_noiseoverlay_startanim",function(_,_,args)
         print("Use: float gapPos float gapSize")
         return
     end
-    REALISTICVHSEFFECT2_CFG.noiseoverlay.enabled = true
-    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapenabled = true
-    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapanim = true
-    REALISTICVHSEFFECT2_CFG.noiseoverlay.gappos = gappos
-    REALISTICVHSEFFECT2_CFG.noiseoverlay.gapsize = gapsize
+    REALISTICVHSEFFECT2_CFG.noise_overlay.enabled = true
+    REALISTICVHSEFFECT2_CFG.noise_overlay.gapenabled = true
+    REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim = true
+    REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = gappos
+    REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize = gapsize
 end)
 
 include("realisticvhseffect2_menu.lua")
