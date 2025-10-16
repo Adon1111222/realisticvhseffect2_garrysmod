@@ -507,36 +507,59 @@ concommand.Add("realisticvhseffect2_menu",function()
             end)
             menu_addslider(mainrendercategory_channelsettings,16,52,448,32,"General Blur X",0,10,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.general_blur = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.general_blur) end)
             menu_addslider(mainrendercategory_channelsettings,16,84,448,32,"Chroma Blur X",0,10,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_blur = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_blur) end)
-            local mainrendercategory_channelsettings_luma_noise = menu_addcategory(mainrendercategory_channelsettings,8,124,472,16,"Luma Noise",false)
+            menu_addslider(mainrendercategory_channelsettings,16,116,448,32,"Chroma Offset X",-100,100,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsetx = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsetx) end)
+            menu_addslider(mainrendercategory_channelsettings,16,148,448,32,"Chroma Offset Y",-100,100,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsety = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsety) end)
+            local mainrendercategory_channelsettings_luma_noise = menu_addcategory(mainrendercategory_channelsettings,8,180,472,16,"Luma Noise",false)
                 menu_addbutton(mainrendercategory_channelsettings_luma_noise,8,36,128,16,"Reset to defaults",function()
-                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_alpha = REALISTICVHSEFFECT2_CFG_DEFAULT.luma_noise_alpha
-                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_enabled = REALISTICVHSEFFECT2_CFG_DEFAULT.luma_noise_enabled
-                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scalex = REALISTICVHSEFFECT2_CFG_DEFAULT.luma_noise_scalex
-                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scaley = REALISTICVHSEFFECT2_CFG_DEFAULT.luma_noise_scaley
+                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_alpha = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.luma_noise_alpha
+                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_enabled = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.luma_noise_enabled
+                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scalex = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.luma_noise_scalex
+                    REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scaley = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.luma_noise_scaley
                 end)
                 menu_addcheckbox(mainrendercategory_channelsettings_luma_noise,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_enabled) end)
                 menu_addslider(mainrendercategory_channelsettings_luma_noise,16,84,448,32,"Scale X",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scalex = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scalex) end)
                 menu_addslider(mainrendercategory_channelsettings_luma_noise,16,100,448,32,"Scale Y",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scaley = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_scaley) end)
                 menu_addslider(mainrendercategory_channelsettings_luma_noise,16,116,448,32,"Alpha",0,1,3,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_alpha = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.luma_noise_alpha) end)
-            local mainrendercategory_channelsettings_chroma_noise = menu_addcategory(mainrendercategory_channelsettings,8,194,472,16,"Chroma Noise",false)
+            local mainrendercategory_channelsettings_chroma_noise = menu_addcategory(mainrendercategory_channelsettings,8,212,472,16,"Chroma Noise",false)
                 menu_addbutton(mainrendercategory_channelsettings_chroma_noise,8,36,128,16,"Reset to defaults",function()
-                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_alpha = REALISTICVHSEFFECT2_CFG_DEFAULT.chroma_noise_alpha
-                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled = REALISTICVHSEFFECT2_CFG_DEFAULT.chroma_noise_enabled
-                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scalex = REALISTICVHSEFFECT2_CFG_DEFAULT.chroma_noise_scalex
-                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scaley = REALISTICVHSEFFECT2_CFG_DEFAULT.chroma_noise_scaley
+                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_alpha = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_noise_alpha
+                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_noise_enabled
+                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scalex = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_noise_scalex
+                    REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scaley = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_noise_scaley
                 end)
                 menu_addcheckbox(mainrendercategory_channelsettings_chroma_noise,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_enabled) end)
                 menu_addslider(mainrendercategory_channelsettings_chroma_noise,16,84,448,32,"Scale X",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scalex = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scalex) end)
                 menu_addslider(mainrendercategory_channelsettings_chroma_noise,16,100,448,32,"Scale Y",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scaley = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_scaley) end)
                 menu_addslider(mainrendercategory_channelsettings_chroma_noise,16,116,448,32,"Alpha",0,1,3,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_alpha = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_noise_alpha) end)
-            local mainrendercategory_channelsettings_chroma_drops = menu_addcategory(mainrendercategory_channelsettings,8,264,472,16,"Chroma Drops",false)
+            local mainrendercategory_channelsettings_chroma_drops = menu_addcategory(mainrendercategory_channelsettings,8,244,472,16,"Chroma Drops",false)
                 menu_addbutton(mainrendercategory_channelsettings_chroma_drops,8,36,128,16,"Reset to defaults",function()
                     REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_line_drop
                     REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop_maxdrops = REALISTICVHSEFFECT2_CFG_DEFAULT.channelssettings.chroma_line_drop_maxdrops
                 end)
                 menu_addcheckbox(mainrendercategory_channelsettings_chroma_drops,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop) end)
                 menu_addslider(mainrendercategory_channelsettings_chroma_drops,16,84,448,32,"Max Drops In Frame",1,20,2,function(slider,value) REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop_maxdrops = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_line_drop_maxdrops) end)
-        local mainrendercategory_noise_overlay = menu_addcategory(mainrendercategory,8,252,472,16,"Noise Overlay",false)
+        local mainrendercategory_videofader = menu_addcategory(mainrendercategory,8,252,472,16,"Video Fader",false)
+            menu_addbutton(mainrendercategory_videofader,8,28,128,16,"Reset to defaults",function()
+                REALISTICVHSEFFECT2_CFG.videofader = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT.videofader)
+            end)
+            menu_addcheckbox(mainrendercategory_videofader,16,52,448,16,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.videofader.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.enabled) end)
+            local videofaderanimstbl = {"None","Fade-in","Fade-out"}
+            menu_addcombobox(mainrendercategory_videofader,8,84,96,64,16,"Animation",videofaderanimstbl[REALISTICVHSEFFECT2_CFG.videofader.anim+1],videofaderanimstbl,function(_,ind) REALISTICVHSEFFECT2_CFG.videofader.anim = ind-1 end)
+            menu_addslider(mainrendercategory_videofader,16,116,448,32,"Animation speed",0,10,2,function(slider,value) REALISTICVHSEFFECT2_CFG.videofader.animspeed = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.animspeed) end)
+            menu_addslider(mainrendercategory_videofader,16,148,448,32,"Alpha",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.videofader.alpha = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.alpha) end)
+            menu_addslider(mainrendercategory_videofader,16,180,448,32,"Colour R",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.videofader.r = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.r) end)
+            menu_addslider(mainrendercategory_videofader,16,212,448,32,"Colour G",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.videofader.g = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.g) end)
+            menu_addslider(mainrendercategory_videofader,16,244,448,32,"Colour B",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.videofader.b = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.videofader.b) end)
+        local mainrendercategory_wrinkle = menu_addcategory(mainrendercategory,8,284,472,16,"Wrinkle",false)
+            menu_addbutton(mainrendercategory_wrinkle,8,28,128,16,"Reset to defaults",function()
+                REALISTICVHSEFFECT2_CFG.wrinkle = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT.wrinkle)
+            end)
+            menu_addcheckbox(mainrendercategory_wrinkle,16,52,448,16,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.wrinkle.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wrinkle.enabled) end)
+            menu_addcheckbox(mainrendercategory_wrinkle,16,84,448,16,"Animation enabled",function(_,value) REALISTICVHSEFFECT2_CFG.wrinkle.anim = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wrinkle.anim) end)
+            menu_addslider(mainrendercategory_wrinkle,16,116,448,32,"Animation speed",0,10,2,function(slider,value) REALISTICVHSEFFECT2_CFG.wrinkle.animspeed = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wrinkle.animspeed) end)
+            menu_addslider(mainrendercategory_wrinkle,16,148,448,32,"Position",-1,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.wrinkle.pos = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wrinkle.pos) end)
+            menu_addslider(mainrendercategory_wrinkle,16,180,448,32,"Size",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.wrinkle.size = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.wrinkle.size) end)
+        local mainrendercategory_noise_overlay = menu_addcategory(mainrendercategory,8,316,472,16,"Noise Overlay",false)
             menu_addbutton(mainrendercategory_noise_overlay,8,28,128,16,"Reset to defaults",function()
                 REALISTICVHSEFFECT2_CFG.noise_overlay = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT.noise_overlay)
             end)
