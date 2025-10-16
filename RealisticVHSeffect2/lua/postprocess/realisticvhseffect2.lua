@@ -20,7 +20,9 @@ if not CLIENT then return end
 
 -- If you dont understand something - you should contact more knowledgeable people.
 
-local REALISTICVHSEFFECT2_CFG_LOADING = true -- When editing switch the value to 'false' if you want to change the values in this file. this also disables automatic config saving.
+local REALISTICVHSEFFECT2_CFG_LOADING = true -- Default value: true. When editing switch the value to 'false' if you want to change the values in this file. this also disables automatic config saving.
+-- Also, please do not enable resource-intensive filters by default and
+-- filters that vary greatly over time(such as wrinkle or noise overlay) or set them to the lowest settings, like a wave filter.
 
 local cachedcurtime = CurTime()
 local rt = render.GetScreenEffectTexture(0)
@@ -191,6 +193,8 @@ REALISTICVHSEFFECT2_CFG.channelssettings = {
     chroma_line_drop = false,
     chroma_line_drop_maxdrops = 1,
     chroma_blur = 4,
+    chroma_offsetx = 0,
+    chroma_offsety = 0,
     chroma_noise_enabled = false,--true,
     chroma_noise_scalex = 16,
     chroma_noise_scaley = 8,
@@ -209,6 +213,22 @@ REALISTICVHSEFFECT2_CFG.noise_overlay = {
     gappos = 0.5,
     gapsize = 0.25,
     gapanim = false,
+}
+REALISTICVHSEFFECT2_CFG.wrinkle = {
+    enabled = false,
+    anim = true,
+    animspeed = 0.25,
+    pos = 0,
+    size = 0.25,
+}
+REALISTICVHSEFFECT2_CFG.videofader = {
+    enabled = false,
+    alpha = 0,
+    r = 1,
+    g = 1,
+    b = 1,
+    anim = 0,
+    animspeed = 1,
 }
 
 
@@ -235,7 +255,8 @@ local function cfg_readdata(cfile)
         for i = 1,cfile:ReadByte() do
             local name,data = cfg_readdata(cfile)
             if name then tbl[tonumber(name) or name] = data else break end
-            -- there is an obvious problem here - keys are always serialized as strings and lua wont be able to index them correctly. of course, this can be fixed, but for now it works
+            -- there is an obvious problem here - keys are always serialized as strings and lua wont be able to index them correctly.
+            -- of course, this can be fixed, but for now it works
         end
         return name,tbl
     elseif type == 1 then
@@ -253,9 +274,10 @@ local function LoadCFG()
             cfile:Skip(4) -- skip date stamp
             local name,data = cfg_readdata(cfile)
             if name == "REALISTICVHSEFFECT2_CFG" then
-                for k,v in pairs(data) do
-                    REALISTICVHSEFFECT2_CFG[k] = v
-                end
+                table.Merge(REALISTICVHSEFFECT2_CFG,data)
+                --for k,v in pairs(data) do
+                --    REALISTICVHSEFFECT2_CFG[k] = v
+                --end
             end
         end
         cfile:Close()
@@ -488,11 +510,7 @@ local function updatemorphrt2()
         render.Clear(127,127,0,255,true,true)
         for i = 1,576 do
             render.SetViewPort(0,i,720,1)
-            --if i > 307 then
-            --    render.Clear(255,127,0,255,true,true)
-            --else
-                render.Clear(127+getwavex2(upscale,btscale,i),127,0,255,true,true)
-            --end
+            render.Clear(127+getwavex2(upscale,btscale,i),127,0,255,true,true)
         end
     render.PopRenderTarget()
 end
@@ -640,7 +658,7 @@ local function addblur()
     blurmat:SetTexture("$basetexture",rt)
     blurmat:SetFloat("$size",REALISTICVHSEFFECT2_CFG.channelssettings.chroma_blur)
     render.SetMaterial(blurmat)
-    render.DrawScreenQuadEx(0,0,ScrW()*(ScrW()/720),ScrH()*(ScrH()/576))
+    render.DrawScreenQuadEx(REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsetx*(ScrW()/720),REALISTICVHSEFFECT2_CFG.channelssettings.chroma_offsety*(ScrH()/576),ScrW()*(ScrW()/720),ScrH()*(ScrH()/576))
 
     render.OverrideAlphaWriteEnable(false,false)
     render.OverrideBlend(false)
@@ -782,11 +800,27 @@ local function rendervhseffect()
     render.DrawScreenQuadEx(0,0,720,576)
     -- Please note that starting from this line the image is in 720 x 576 format (for ease of adding effects)
 
-    if REALISTICVHSEFFECT2_CFG.paused then
+    if REALISTICVHSEFFECT2_CFG.paused then -- removes colour. not in use yet.
         colormod:SetFloat("$pp_colour_brightness",0)colormod:SetFloat("$pp_colour_contrast",1)colormod:SetFloat("$pp_colour_colour",0)
         render.SetMaterial(colormod)
         render.DrawScreenQuadEx(0,0,720,576)
     end
+
+    if REALISTICVHSEFFECT2_CFG.videofader.enabled then
+        if REALISTICVHSEFFECT2_CFG.videofader.alpha ~= 0 then
+            draw.RoundedBox(0,0,0,720,576,Color(REALISTICVHSEFFECT2_CFG.videofader.r*255,
+                REALISTICVHSEFFECT2_CFG.videofader.g*255,
+                REALISTICVHSEFFECT2_CFG.videofader.b*255,
+                REALISTICVHSEFFECT2_CFG.videofader.alpha*255))
+            render.UpdateScreenEffectTexture(0)
+        end
+        if REALISTICVHSEFFECT2_CFG.videofader.anim == 1 then
+            REALISTICVHSEFFECT2_CFG.videofader.alpha = math.Clamp(REALISTICVHSEFFECT2_CFG.videofader.alpha - (RealFrameTime()*REALISTICVHSEFFECT2_CFG.videofader.animspeed),0,1)
+        elseif REALISTICVHSEFFECT2_CFG.videofader.anim == 2 then
+            REALISTICVHSEFFECT2_CFG.videofader.alpha = math.Clamp(REALISTICVHSEFFECT2_CFG.videofader.alpha + (RealFrameTime()*REALISTICVHSEFFECT2_CFG.videofader.animspeed),0,1)
+        end
+    end
+
     drawcomets()
 
     draw.RoundedBox(0,-2,0,4,576,Color(0,0,0))
@@ -806,7 +840,7 @@ local function rendervhseffect()
         render.DrawScreenQuad()
         render.UpdateScreenEffectTexture(0)
     end
-    if REALISTICVHSEFFECT2_CFG.shuttlering ~= 0 then
+    if REALISTICVHSEFFECT2_CFG.shuttlering ~= 0 then -- 2-head VCR emulation. not yet developed well enough to be mentioned in documentation.
         for i = 1,2 do
             local cometval = 0
             local curmin = -math.random(0,10)
@@ -823,6 +857,7 @@ local function rendervhseffect()
                 end
             end
         end
+        render.UpdateScreenEffectTexture(0)
     end
 
     -- Back to original resolution
@@ -831,6 +866,20 @@ local function rendervhseffect()
         if REALISTICVHSEFFECT2_CFG.sharpen.size > 0 and REALISTICVHSEFFECT2_CFG.sharpen.value > 0 then
             DrawSharpen(REALISTICVHSEFFECT2_CFG.sharpen.size,REALISTICVHSEFFECT2_CFG.sharpen.value)
             render.UpdateScreenEffectTexture(0)
+        end
+    end
+    if REALISTICVHSEFFECT2_CFG.wrinkle.enabled then
+        colormod:SetFloat("$pp_colour_brightness",0)colormod:SetFloat("$pp_colour_contrast",1)colormod:SetFloat("$pp_colour_colour",1)
+        surface.SetMaterial(colormod)
+        local wrinkleypos = REALISTICVHSEFFECT2_CFG.wrinkle.pos
+        local wrinkleysize = REALISTICVHSEFFECT2_CFG.wrinkle.size
+        surface.DrawTexturedRectUV(0,wrinkleypos*ScrH(),ScrW(),wrinkleysize*ScrH(),0,wrinkleypos,1,wrinkleypos)
+        render.UpdateScreenEffectTexture(0)
+        if REALISTICVHSEFFECT2_CFG.wrinkle.anim then
+            REALISTICVHSEFFECT2_CFG.wrinkle.pos = REALISTICVHSEFFECT2_CFG.wrinkle.pos + (RealFrameTime()*REALISTICVHSEFFECT2_CFG.wrinkle.animspeed)
+            if REALISTICVHSEFFECT2_CFG.wrinkle.pos > 1 then
+                REALISTICVHSEFFECT2_CFG.wrinkle.pos = -REALISTICVHSEFFECT2_CFG.wrinkle.size
+            end
         end
     end
     renderinterlacing()
@@ -950,6 +999,17 @@ concommand.Add("realisticvhseffect2_noiseoverlay_startanim",function(_,_,args)
     REALISTICVHSEFFECT2_CFG.noise_overlay.gapanim = true
     REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = gappos
     REALISTICVHSEFFECT2_CFG.noise_overlay.gapsize = gapsize
+end)
+
+concommand.Add("realisticvhseffect2_videofader_fadein",function(_,_,args)
+    REALISTICVHSEFFECT2_CFG.videofader.enabled = true
+    REALISTICVHSEFFECT2_CFG.videofader.alpha = 1
+    REALISTICVHSEFFECT2_CFG.videofader.anim = 1
+end)
+concommand.Add("realisticvhseffect2_videofader_fadeout",function(_,_,args)
+    REALISTICVHSEFFECT2_CFG.videofader.enabled = true
+    REALISTICVHSEFFECT2_CFG.videofader.alpha = 0
+    REALISTICVHSEFFECT2_CFG.videofader.anim = 2
 end)
 
 include("realisticvhseffect2_menu.lua")
