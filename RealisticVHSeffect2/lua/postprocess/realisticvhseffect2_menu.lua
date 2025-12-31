@@ -352,6 +352,14 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
             rebuildlist()
         end
     end)
+    menu_addcheckbox(frame,320,264,448,32,"VCR Text",function(_,value)REALISTICVHSEFFECT2_CFG.osd.vcr_text_enabled=value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.osd.vcr_text_enabled)end)
+    local edittext4 = vgui.Create("DTextEntry",frame)
+    edittext4:SetPos(320,280)
+    edittext4:SetSize(128,16)
+    edittext4:SetText(REALISTICVHSEFFECT2_CFG.osd.vcr_text)
+    edittext4.OnChange = function(self)
+        REALISTICVHSEFFECT2_CFG.osd.vcr_text = self:GetValue()
+    end
 end)
 concommand.Add("realisticvhseffect2_resetall",function(_,_,args,argsStr)
     if string.find(argsStr or "","force",0,-1) then
@@ -602,3 +610,14 @@ hook.Add("PopulateToolMenu","RealisticVHSEffect2Menu",function()
         end
     end)
 end)
+
+
+
+list.Set("PostProcess","Realistic VHS Effect 2",{
+    icon = "gui/postprocess/realisticvhseffect2.png",
+    convar = "realisticvhseffect2_enabled",
+    category = "#effects_pp",
+    onclick = function()
+        RunConsoleCommand("realisticvhseffect2_menu")
+    end
+})
