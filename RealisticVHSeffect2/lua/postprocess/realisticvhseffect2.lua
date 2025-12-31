@@ -26,7 +26,7 @@ local REALISTICVHSEFFECT2_CFG_LOADING = true -- Default value: true. When editin
 
 local cachedcurtime = CurTime()
 local rt = render.GetScreenEffectTexture(0)
-local blurmat = Material("pp/blurx")
+local blurmat = CreateMaterial("realisticvhseffect2/blurxmat","g_blurx",{["$basetexture"]=rt:GetName()})--Material("pp/blurx")
 local morphrt = GetRenderTarget("realisticvhseffect2/morphrt",720,576)
 local morphmat = CreateMaterial("realisticvhseffect2/morphmat","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = morphrt:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
 local morphrt2 = GetRenderTarget("realisticvhseffect2/morphrt2",720,576)
@@ -89,7 +89,7 @@ end
 render.PopRenderTarget()
 ]]
 
-local screenratio = 4/3--720/576 -- PAL has a large horizontal resolution(possible) and an aspect ratio of 5:4, not 4:3. Fixed
+local screenratio = 4/3-- PAL has a large horizontal resolution(possible) but an aspect ratio of 4:3.
 
 -- prepare wave and lines
 render.PushRenderTarget(morphrt)
@@ -165,7 +165,9 @@ REALISTICVHSEFFECT2_CFG.osd = {
         
         ["%h12"] = "Hours12",
         ["%mer"] = "Meridiem",
-    }
+    },
+    vcr_text_enabled = false,
+    vcr_text = "PLAY",
 }
 
 REALISTICVHSEFFECT2_CFG.postclrmod = {
@@ -405,7 +407,7 @@ local function addosd()
         local datealign = TEXT_ALIGN_LEFT
         local datex = 0
         local datey = 0
-        if REALISTICVHSEFFECT2_CFG.osd.datepos == 1 then     -- left down
+        if REALISTICVHSEFFECT2_CFG.osd.datepos == 1 then     -- left up
             datex = ScrW()/8
             datey = ScrH()/6
             if REALISTICVHSEFFECT2_CFG.viewtype == 2 then -- fix cropping date
@@ -446,6 +448,13 @@ local function addosd()
         else
             draw_osdtext(string.upper(REALISTICVHSEFFECT2_CFG.osd.middletext),"RealisticVHSEffect2Font",ScrW()/2,ScrH()/2,Color(255,255,255),TEXT_ALIGN_CENTER,TEXT_ALIGN_CENTER)
         end
+    end
+    if REALISTICVHSEFFECT2_CFG.osd.vcr_text_enabled then -- of course, this is not the best place for this. however, for now, it is the best that can be done.
+        surface.SetFont("RealisticVHSEffect2Font")
+        local vcr_text_w,vcr_text_h = surface.GetTextSize(REALISTICVHSEFFECT2_CFG.osd.vcr_text)
+        local vcr_text_x,vcr_text_y = ScrW()/8,ScrH()/6
+        draw.RoundedBox(0,vcr_text_x,vcr_text_y+(ScrH()/32),vcr_text_w+(ScrW()/128),vcr_text_h-(ScrH()/32),Color(10,10,10))
+        draw.SimpleText(tostring(REALISTICVHSEFFECT2_CFG.osd.vcr_text),"RealisticVHSEffect2Font",vcr_text_x,vcr_text_y,Color(255,255,255))
     end
 end
 -- Horizontal Synchronization Support
@@ -1010,6 +1019,35 @@ concommand.Add("realisticvhseffect2_videofader_fadeout",function(_,_,args)
     REALISTICVHSEFFECT2_CFG.videofader.enabled = true
     REALISTICVHSEFFECT2_CFG.videofader.alpha = 0
     REALISTICVHSEFFECT2_CFG.videofader.anim = 2
+end)
+concommand.Add("realisticvhseffect2_setcfgval",function(_,_,args)
+    local pathstr = args[1]
+    local valstr = args[2]
+    if not pathstr or not valstr then
+        print("Changes the value at the specified path in the config to the specified one.")
+        print("Use: string pathToValue any newValue")
+        return
+    end
+    local path = string.Explode(".",pathstr)
+    local function getrightvalue(o)
+        if type(o)=="table" then print("Table type not allowed!")return o end
+        if type(o)=="number" then return tonumber(valstr) end
+        if type(o)=="boolean" then return tobool(valstr) end
+        if type(o)=="string" then return valstr end
+        return o
+    end
+    if #path==2 then
+        if type(REALISTICVHSEFFECT2_CFG[path[1]])=="table" then
+            REALISTICVHSEFFECT2_CFG[path[1]][path[2]] = getrightvalue(REALISTICVHSEFFECT2_CFG[path[1]][path[2]])
+        else
+            print("Path not found")
+        end
+    else
+        REALISTICVHSEFFECT2_CFG[path[1]] = getrightvalue(REALISTICVHSEFFECT2_CFG[path[1]])
+    end
+end)
+concommand.Add("realisticvhseffect2_printcfg",function()
+    PrintTable(REALISTICVHSEFFECT2_CFG)
 end)
 
 include("realisticvhseffect2_menu.lua")
