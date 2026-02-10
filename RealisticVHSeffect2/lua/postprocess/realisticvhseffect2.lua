@@ -26,7 +26,7 @@ local REALISTICVHSEFFECT2_CFG_LOADING = true -- Default value: true. When editin
 
 local cachedcurtime = CurTime()
 local rt = render.GetScreenEffectTexture(0)
-local blurmat = CreateMaterial("realisticvhseffect2/blurxmat","g_blurx",{["$basetexture"]=rt:GetName()})--Material("pp/blurx")
+local blurmat = CreateMaterial("realisticvhseffect2/blurxmat","g_blurx",{["$basetexture"]=rt:GetName()})--,["$vertexalpha"] = "1",["$translucent"] = "1"})--Material("pp/blurx")
 local morphrt = GetRenderTarget("realisticvhseffect2/morphrt",720,576)
 local morphmat = CreateMaterial("realisticvhseffect2/morphmat","g_refract",{["$fbtexture"] = rt:GetName(),["$normalmap"] = morphrt:GetName(),["$refractamount"] = 1,["$bluramout"] = 0})
 local morphrt2 = GetRenderTarget("realisticvhseffect2/morphrt2",720,576)
@@ -51,11 +51,11 @@ local matblue = CreateMaterial("realisticvhseffect2/bluemat","UnLitGeneric",{
 })
 local colormod = CreateMaterial("realisticvhseffect2/colormod","g_colourmodify",{["$fbtexture"] = rt:GetName(),["$pp_colour_addr"] = 0,["$pp_colour_addg"] = 0,["$pp_colour_addb"] = 0,["$pp_colour_brightness"] = 0.1,["$pp_colour_inv"] = 0,["$pp_colour_colour"] = 0,["$pp_colour_contrast"] = 1,["$pp_colour_mulr"] = 0,["$pp_colour_mulg"] = 0,["$pp_colour_mulb"] = 0,})
 local interlacedbufferrt = GetRenderTargetEx("realisticvhseffect2/interlacedbufferrt",ScrW(),ScrH(),
-	RT_SIZE_NO_CHANGE,
-	3,
-	bit.bor(2, 256),
-	0,
-	IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer. update 09.06.2025
+    RT_SIZE_NO_CHANGE,
+    3,
+    bit.bor(2, 256),
+    0,
+    IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer. update 09.06.2025
 local interlacedbuffermat = CreateMaterial("realisticvhseffect2/interlacedbuffermat","UnLitGeneric",{["$basetexture"] = interlacedbufferrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$alpha"] = "1"})
 local interlacedcopyrt = GetRenderTarget("realisticvhseffect2/interlacedcopyrt",ScrW(),ScrH())
 local interlacedcopymat = CreateMaterial("realisticvhseffect2/interlacedcopymat","UnLitGeneric",{["$basetexture"] = interlacedcopyrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
@@ -63,13 +63,22 @@ local interlacedcopymat = CreateMaterial("realisticvhseffect2/interlacedcopymat"
 local noisert = GetRenderTarget("realisticvhseffect2/noisert",720,576)
 local noisemat = CreateMaterial("realisticvhseffect2/noisemat","UnLitGeneric",{["$basetexture"] = noisert:GetName(),["$ignorez"] = "1",["$translucent"] = "1",["$vertexalpha"] = "1"})
 
-local noiseoverlayrt = GetRenderTargetEx("realisticvhseffect2/noiseoverlayrt3",720,576,
-	RT_SIZE_NO_CHANGE,
-	3,
-	bit.bor(2, 256),
-	0,
-	IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer.
-local noiseoverlaymat = CreateMaterial("realisticvhseffect2/noiseoverlaymat3","UnLitGeneric",{["$basetexture"] = noiseoverlayrt:GetName()})
+local noiseoverlayrt = GetRenderTargetEx("realisticvhseffect2/noiseoverlayrt",720,576,
+    RT_SIZE_NO_CHANGE,
+    3,
+    bit.bor(2, 256),
+    0,
+    IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer.
+local noiseoverlaymat = CreateMaterial("realisticvhseffect2/noiseoverlaymat","UnLitGeneric",{["$basetexture"] = noiseoverlayrt:GetName()})
+
+local screencopymat = CreateMaterial("realisticvhseffect2/screencopymat","GMODScreenspace",{["$basetexture"]=rt:GetName(),["$translucent"] = "0",["$ignorez"] = "1"})
+local tubedelayrt = GetRenderTargetEx("realisticvhseffect2/tubedelayrt",ScrW(),ScrH(),
+    RT_SIZE_NO_CHANGE,
+    2,
+    bit.bor(2, 256),
+    0,
+    IMAGE_FORMAT_BGR888) -- remove alpha channel for buffer.
+local tubedelaymat = CreateMaterial("realisticvhseffect2/tubedelaymat","UnLitGeneric",{["$basetexture"] = tubedelayrt:GetName(),["$ignorez"] = "1",["$translucent"] = "1"})
 
 -- i have not been able to get this system to work yet, so i will leave it here for a while
 --[[
@@ -116,13 +125,19 @@ end
 render.PopRenderTarget()
 --
 
+-- prepare tube delay rt
+render.PushRenderTarget(tubedelayrt)
+render.Clear(0,0,0,255,true,true)
+render.PopRenderTarget()
+--
+
 REALISTICVHSEFFECT2_CFG = {}
 
 -- these variables have been moved to convars due to their use, this may be useful in the future
 local REALISTICVHSEFFECT2_CFG_enabled = CreateClientConVar("realisticvhseffect2_enabled", "0", true, false, nil, 0, 1 )
 local REALISTICVHSEFFECT2_CFG_autodisable = CreateClientConVar("realisticvhseffect2_autodisable", "0", true, false, nil, 0, 1 )
 
-local REALISTICVHSEFFECT2_CFG_osdautocurtime = CreateClientConVar("realisticvhseffect2_osdautocurtime", "0", true, false, nil, 0, 1 )
+local REALISTICVHSEFFECT2_CFG_osdautocurtime = CreateClientConVar("realisticvhseffect2_osdautocurtime", "1", true, false, nil, 0, 1 )
 
 if REALISTICVHSEFFECT2_CFG_autodisable:GetInt() == 1 then
      REALISTICVHSEFFECT2_CFG_enabled:SetInt(0)
@@ -152,22 +167,9 @@ REALISTICVHSEFFECT2_CFG.osd = {
     datetbl = {
         "%h",":","%mi",":","%s","\n","%d",".","%m",".","%y"
     },
-    datesamples = {
-        ["\n"] = "NewLine",
-        ["%h"] = "Hours",
-        ["%mi"] = "Minutes",
-        ["%s"] = "Seconds",
-        ["%f"] = "Frames",
-        ["%ms"] = "Miliseconds",
-        ["%d"] = "Days",
-        ["%m"] = "Months",
-        ["%y"] = "Years",
-        
-        ["%h12"] = "Hours12",
-        ["%mer"] = "Meridiem",
-    },
     vcr_text_enabled = false,
     vcr_text = "PLAY",
+    timepassageenabled = true,
 }
 
 REALISTICVHSEFFECT2_CFG.postclrmod = {
@@ -231,6 +233,11 @@ REALISTICVHSEFFECT2_CFG.videofader = {
     b = 1,
     anim = 0,
     animspeed = 1,
+}
+REALISTICVHSEFFECT2_CFG.tubedelay = {
+    enabled = false,
+    addalpha = 0.02,
+    drawalpha = 0.2
 }
 
 
@@ -335,7 +342,7 @@ local function getdateosd_value(val,type)
 end
 
 local realframetime = 0
-local function formattostring(tbl,y,m,d,h,mi,s,ms,f,h12,mer)
+local function formattostring(tbl,y,m,d,h,mi,s,ms,f,h12,mer,mw)
     local str = ""
     for k,v in pairs(tbl) do
         if v == "%y" then str = str .. y       -- years
@@ -349,28 +356,32 @@ local function formattostring(tbl,y,m,d,h,mi,s,ms,f,h12,mer)
 
         elseif v == "%h12" then str = str .. h12  -- hours 12-based
         elseif v == "%mer" then str = str .. mer  -- meridiem
+
+        elseif v == "%mw" then str = str .. mw -- month word
         else str = str .. v end                -- raw
     end
     return str
 end
 
 local function getdateosd()
-    REALISTICVHSEFFECT2_CFG.osd.seconds = REALISTICVHSEFFECT2_CFG.osd.seconds + realframetime -- fixes the cause of time speeding up when the menu is open
-    if REALISTICVHSEFFECT2_CFG.osd.seconds >= 60 then
-        REALISTICVHSEFFECT2_CFG.osd.seconds = 0
-        REALISTICVHSEFFECT2_CFG.osd.minutes = REALISTICVHSEFFECT2_CFG.osd.minutes + 1 -- please note that the difference between the current seconds and the maximum is not taken into account!
-        if REALISTICVHSEFFECT2_CFG.osd.minutes >= 60 then
-            REALISTICVHSEFFECT2_CFG.osd.minutes = 0
-            REALISTICVHSEFFECT2_CFG.osd.hours = REALISTICVHSEFFECT2_CFG.osd.hours + 1
-            if REALISTICVHSEFFECT2_CFG.osd.hours >= 24 then
-                REALISTICVHSEFFECT2_CFG.osd.hours = 0
-                REALISTICVHSEFFECT2_CFG.osd.days = REALISTICVHSEFFECT2_CFG.osd.days + 1
-                if REALISTICVHSEFFECT2_CFG.osd.days > getdateosd_monthdays() then
-                    REALISTICVHSEFFECT2_CFG.osd.days = 1
-                    REALISTICVHSEFFECT2_CFG.osd.months = REALISTICVHSEFFECT2_CFG.osd.months + 1
-                    if REALISTICVHSEFFECT2_CFG.osd.months > 12 then
-                        REALISTICVHSEFFECT2_CFG.osd.months = 1
-                        REALISTICVHSEFFECT2_CFG.osd.years = REALISTICVHSEFFECT2_CFG.osd.years + 1
+    if REALISTICVHSEFFECT2_CFG.osd.timepassageenabled then
+        REALISTICVHSEFFECT2_CFG.osd.seconds = REALISTICVHSEFFECT2_CFG.osd.seconds + realframetime -- fixes the cause of time speeding up when the menu is open
+        if REALISTICVHSEFFECT2_CFG.osd.seconds >= 60 then
+            REALISTICVHSEFFECT2_CFG.osd.seconds = 0
+            REALISTICVHSEFFECT2_CFG.osd.minutes = REALISTICVHSEFFECT2_CFG.osd.minutes + 1 -- please note that the difference between the current seconds and the maximum is not taken into account!
+            if REALISTICVHSEFFECT2_CFG.osd.minutes >= 60 then
+                REALISTICVHSEFFECT2_CFG.osd.minutes = 0
+                REALISTICVHSEFFECT2_CFG.osd.hours = REALISTICVHSEFFECT2_CFG.osd.hours + 1
+                if REALISTICVHSEFFECT2_CFG.osd.hours >= 24 then
+                    REALISTICVHSEFFECT2_CFG.osd.hours = 0
+                    REALISTICVHSEFFECT2_CFG.osd.days = REALISTICVHSEFFECT2_CFG.osd.days + 1
+                    if REALISTICVHSEFFECT2_CFG.osd.days > getdateosd_monthdays() then
+                        REALISTICVHSEFFECT2_CFG.osd.days = 1
+                        REALISTICVHSEFFECT2_CFG.osd.months = REALISTICVHSEFFECT2_CFG.osd.months + 1
+                        if REALISTICVHSEFFECT2_CFG.osd.months > 12 then
+                            REALISTICVHSEFFECT2_CFG.osd.months = 1
+                            REALISTICVHSEFFECT2_CFG.osd.years = REALISTICVHSEFFECT2_CFG.osd.years + 1
+                        end
                     end
                 end
             end
@@ -394,7 +405,8 @@ local function getdateosd()
     getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.hours,"h"),getdateosd_value(REALISTICVHSEFFECT2_CFG.osd.minutes,"mi"),
     getdateosd_value(math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds),"s"),getdateosd_value(math.floor((REALISTICVHSEFFECT2_CFG.osd.seconds-math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds))*1000),"ms"), -- seconds and miliseconds
     getdateosd_value(math.floor((REALISTICVHSEFFECT2_CFG.osd.seconds-math.floor(REALISTICVHSEFFECT2_CFG.osd.seconds))*25),"f"), -- frames(25 f-fps)
-    getdateosd_value(hours12,"h12"),getdateosd_value(mer,"mer")) -- hours 12-based and meridiem
+    getdateosd_value(hours12,"h12"),getdateosd_value(mer,"mer"), -- hours 12-based and meridiem
+    getdateosd_value(({"JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"})[REALISTICVHSEFFECT2_CFG.osd.months] or "NUL","mw")) -- month word(JAN,FEB,MAR ... )
 end
 
 local function draw_osdtext(a,b,c,d,e,f,g)
@@ -725,6 +737,23 @@ local function renderinterlacing()
     end
 end
 
+local function drawtubedelay()
+    render.UpdateScreenEffectTexture(0)
+        render.PushRenderTarget(tubedelayrt)
+            screencopymat:SetFloat("$alpha",REALISTICVHSEFFECT2_CFG.tubedelay.addalpha)--0.02)
+            render.SetMaterial(screencopymat)
+            render.DrawScreenQuad()
+        render.PopRenderTarget()
+    tubedelaymat:SetFloat("$alpha",REALISTICVHSEFFECT2_CFG.tubedelay.drawalpha)--0.2)
+    render.SetMaterial(tubedelaymat)
+render.OverrideBlend(true,BLEND_SRC_ALPHA,BLEND_ONE,0)
+    render.DrawScreenQuad()
+render.OverrideBlend(false)
+
+    screencopymat:SetFloat("$alpha",1)
+    render.UpdateScreenEffectTexture(0)
+end
+
 local lastquery = 0
 
 local lastsavedtime = 0
@@ -790,6 +819,10 @@ local function rendervhseffect()
     end
     if REALISTICVHSEFFECT2_CFG.lines.enabled then
         updatemorphrt2()
+    end
+
+    if REALISTICVHSEFFECT2_CFG.tubedelay.enabled then
+        drawtubedelay()
     end
 
     if REALISTICVHSEFFECT2_CFG.presize then
@@ -924,6 +957,16 @@ local function rendervhseffect()
         draw.RoundedBox(0,0,0,cropwidth,ScrH(),Color(0,0,0))
         draw.RoundedBox(0,ScrW()-cropwidth,0,cropwidth,ScrH(),Color(0,0,0))
         render.UpdateScreenEffectTexture(0)
+    elseif REALISTICVHSEFFECT2_CFG.viewtype == 3 then
+        -- crop to fit width
+        draw.RoundedBox(0,0,0,ScrW(),ScrH(),Color(0,0,0))
+        blurmat:SetTexture("$basetexture",rt)
+        blurmat:SetFloat("$size",0)
+        render.SetMaterial(blurmat)
+        local cropwidth = (ScrW()-(ScrW()/screenratio))
+        local cropheight = ScrH()*(ScrW()/(ScrW()+cropwidth*2))
+        render.DrawScreenQuadEx(-cropwidth/2,-cropheight/2,ScrW()+cropwidth,ScrH()+cropheight)
+        render.UpdateScreenEffectTexture(0)
     end
     cachedcurtime = CurTime()
     realframetime = SysTime()-lastquery
@@ -1048,6 +1091,13 @@ concommand.Add("realisticvhseffect2_setcfgval",function(_,_,args)
 end)
 concommand.Add("realisticvhseffect2_printcfg",function()
     PrintTable(REALISTICVHSEFFECT2_CFG)
+end)
+cvars.AddChangeCallback("realisticvhseffect2_enabled",function(convar_name, value_old, value_new)
+    if value_old == "1" and value_new == "0" then
+        if REALISTICVHSEFFECT2_CFG_dspenabled:GetBool() then
+            LocalPlayer():SetDSP(1)
+        end
+    end
 end)
 
 include("realisticvhseffect2_menu.lua")
