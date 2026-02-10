@@ -1,3 +1,19 @@
+local REALISTICVHSEFFECT2_CFG_osd_datesamples = {
+    ["\n"] = "NewLine",
+    ["%h"] = "Hours",
+    ["%mi"] = "Minutes",
+    ["%s"] = "Seconds",
+    ["%f"] = "Frames",
+    ["%ms"] = "Miliseconds",
+    ["%d"] = "Days",
+    ["%m"] = "Months",
+    ["%y"] = "Years",
+        
+    ["%h12"] = "Hours12",
+    ["%mer"] = "Meridiem",
+
+    ["%mw"] = "Months word",
+}
 
 local REALISTICVHSEFFECT2_CFG_enabled = GetConVar_Internal("realisticvhseffect2_enabled")
 local REALISTICVHSEFFECT2_CFG_autodisable = GetConVar_Internal("realisticvhseffect2_autodisable")
@@ -197,8 +213,8 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
         local fragmentbutton = vgui.Create("DButton",fragmentpanel)
         fragmentbutton:SetPos(62,0)
         fragmentbutton:SetSize(52,26)
-        if REALISTICVHSEFFECT2_CFG.osd.datesamples[v] then
-            fragmentbutton:SetText(REALISTICVHSEFFECT2_CFG.osd.datesamples[v] or "None")
+        if REALISTICVHSEFFECT2_CFG_osd_datesamples[v] then
+            fragmentbutton:SetText(REALISTICVHSEFFECT2_CFG_osd_datesamples[v] or "None")
         else
             if v == "\n" then
                 fragmentbutton:SetText("NewLine")
@@ -278,7 +294,7 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
         end
     end
     local datesamples = {}
-    for k,v in pairs(REALISTICVHSEFFECT2_CFG.osd.datesamples) do
+    for k,v in pairs(REALISTICVHSEFFECT2_CFG_osd_datesamples) do
         datesamples[k] = "[" .. string.Replace(string.TrimLeft(tostring(k),"%",""),"\n","") .. "] " .. v
     end
     menu_addcombobox(frame,8,424,96,96,16,"Add Fragment","Select Sample",datesamples,function(_,ind,val)
@@ -287,7 +303,7 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
         local strS = string.find(val,"] ")
         if not strS then return end
         local sval = string.sub(val,strS+2)
-        for k,v in pairs(REALISTICVHSEFFECT2_CFG.osd.datesamples) do
+        for k,v in pairs(REALISTICVHSEFFECT2_CFG_osd_datesamples) do
             if v == sval then
                 sampleval = k
             end
@@ -326,7 +342,7 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
     menu_addnumwang(frame,320,136,64,64,16,"Days",1,31,REALISTICVHSEFFECT2_CFG.osd.days,function(self)REALISTICVHSEFFECT2_CFG.osd.days = self:GetValue() end)
     menu_addnumwang(frame,320,156,64,64,16,"Hours",1,24,REALISTICVHSEFFECT2_CFG.osd.hours,function(self)REALISTICVHSEFFECT2_CFG.osd.hours = self:GetValue() end)
     menu_addnumwang(frame,320,176,64,64,16,"Minutes",0,59,REALISTICVHSEFFECT2_CFG.osd.minutes,function(self)REALISTICVHSEFFECT2_CFG.osd.minutes = self:GetValue() end)
-    menu_addnumwang(frame,320,196,64,64,16,"Seconds",9,59,REALISTICVHSEFFECT2_CFG.osd.seconds,function(self)REALISTICVHSEFFECT2_CFG.osd.seconds = self:GetValue() end)
+    menu_addnumwang(frame,320,196,64,64,16,"Seconds",0,59,REALISTICVHSEFFECT2_CFG.osd.seconds,function(self)REALISTICVHSEFFECT2_CFG.osd.seconds = self:GetValue() end)
     menu_addlabel(frame,196,32,256,64,"Use X to remove elements and click the buttons\nat the top and bottom with the fragment name\nto change. Add fragments using samples or\ncreate your own.")
     menu_addlabel(frame,8,464,128,32,"Middle Text")
     local edittext2 = vgui.Create("DTextEntry",frame)
@@ -352,6 +368,7 @@ concommand.Add("realisticvhseffect2_osdmenu",function()
             rebuildlist()
         end
     end)
+    menu_addcheckbox(frame,320,248,448,32,"Enable Time Passage",function(_,value)REALISTICVHSEFFECT2_CFG.osd.timepassageenabled=value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.osd.timepassageenabled)end)
     menu_addcheckbox(frame,320,264,448,32,"VCR Text",function(_,value)REALISTICVHSEFFECT2_CFG.osd.vcr_text_enabled=value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.osd.vcr_text_enabled)end)
     local edittext4 = vgui.Create("DTextEntry",frame)
     edittext4:SetPos(320,280)
@@ -458,6 +475,13 @@ concommand.Add("realisticvhseffect2_menu",function()
             menu_addslider(prerendercategory_lensclr,16,52,448,32,"R Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.r = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.r) end)
             menu_addslider(prerendercategory_lensclr,16,84,448,32,"G Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.g = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.g) end)
             menu_addslider(prerendercategory_lensclr,16,116,448,32,"B Distance",-32,32,0,function(slider,value) REALISTICVHSEFFECT2_CFG.cameraclrdist.b = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.cameraclrdist.b) end)
+        local prerendercategory_tubedelay = menu_addcategory(prerendercategory,8,164,472,16,"Tube Delay",false)
+            menu_addbutton(prerendercategory_tubedelay,8,28,128,16,"Reset to defaults",function()
+                REALISTICVHSEFFECT2_CFG.cameraclrdist = table.Copy(REALISTICVHSEFFECT2_CFG_DEFAULT.cameraclrdist)
+            end)
+            menu_addcheckbox(prerendercategory_tubedelay,16,52,448,32,"Enabled",function(_,value) REALISTICVHSEFFECT2_CFG.tubedelay.enabled = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.tubedelay.enabled) end)
+            menu_addslider(prerendercategory_tubedelay,16,84,448,32,"Add Alpha",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.tubedelay.addalpha = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.tubedelay.addalpha) end)
+            menu_addslider(prerendercategory_tubedelay,16,116,448,32,"Draw Alpha",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.tubedelay.drawalpha = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.tubedelay.drawalpha) end)
     local mainrendercategory = menu_addcategory(mainscrollpanel,8,8,496,196,"Main-Render",false)
         menu_addbutton(mainrendercategory,8,28,128,16,"OSD Menu",function()
             RunConsoleCommand("realisticvhseffect2_osdmenu","")
@@ -578,7 +602,7 @@ concommand.Add("realisticvhseffect2_menu",function()
             menu_addslider(mainrendercategory_noise_overlay,16,132,448,32,"Gap position",0,1,2,function(slider,value) REALISTICVHSEFFECT2_CFG.noise_overlay.gappos = value end,function(self)self:SetValue(REALISTICVHSEFFECT2_CFG.noise_overlay.gappos) end)
 
     local postrendercategory = menu_addcategory(mainscrollpanel,8,204,496,196,"Post-Render",false)
-        local viewtypetbl = {[0] = "Full-Screen",[1] = "ReSize-4:3",[2] = "Crop-4:3"}
+        local viewtypetbl = {[0] = "Full-Screen",[1] = "ReSize-4:3",[2] = "Crop-4:3",[3] = "Crop-to-width"}
         menu_addcombobox(postrendercategory,32,32,64,96,16,"ViewType",viewtypetbl[REALISTICVHSEFFECT2_CFG.viewtype],viewtypetbl,function(_,ind) REALISTICVHSEFFECT2_CFG.viewtype = ind-1 end)
         local postrendercategory_clrmod = menu_addcategory(postrendercategory,32,56,472,16,"Colour Mod",false)
             menu_addbutton(postrendercategory_clrmod,8,28,128,16,"Reset to defaults",function()
